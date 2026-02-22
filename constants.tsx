@@ -145,3 +145,7 @@ export const INITIAL_VENDORS = [
 export const VENDOR_CATEGORIES = [
   'Lugar', 'Catering', 'Fotografía', 'Video', 'Música/DJ', 'Flores', 'Decoración', 'Vestido/Traje', 'Maquillaje/Peinado', 'Transporte', 'Invitaciones', 'Otros'
 ];
+
+export const GUEST_CATEGORIES = [
+  'Familia de Camilo', 'Familia de Valentina', 'Amigo de Camilo', 'Amigo de Valentina'
+];

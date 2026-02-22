@@ -4,6 +4,7 @@ export interface GuestMember {
   name: string;
   ageCategory: 'Adulto' | 'Niño';
   isUnknown?: boolean;
+  tableId?: string;
 }
 
 export interface Guest {
@@ -61,6 +62,9 @@ export interface Vendor {
   contractSigned: boolean;
   dueDate: string;
   notes: string;
+  pdfUrl?: string;
+  pdfName?: string;
+  pdfPath?: string;
 }
 
 export interface UserProfile {
@@ -68,6 +72,7 @@ export interface UserProfile {
   email: string;
   role: string;
   full_name: string;
+  wedding_id: string | null;
   created_at?: string;
 }
 

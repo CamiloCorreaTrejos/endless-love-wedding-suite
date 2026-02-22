@@ -114,16 +114,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   }, [metrics, keyVendors]);
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 max-w-full overflow-hidden">
+    <div className="space-y-8 md:space-y-10 animate-in fade-in duration-700 max-w-full overflow-hidden">
       {/* Header Editorial Section */}
       <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 pb-8 border-b border-stone-100">
-        <div className="space-y-2">
-          <h1 className="text-5xl font-bold text-stone-800 serif tracking-tight">
+        <div className="space-y-3">
+          <h1 className="text-3xl md:text-5xl font-bold text-stone-800 serif tracking-tight">
             {data.partner1} & {data.partner2}
           </h1>
-          <div className="flex items-center gap-4 text-stone-400">
-            <p className="text-lg italic serif">21 de agosto de 2027</p>
-            <div className="w-1.5 h-1.5 rounded-full bg-stone-200" />
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 text-stone-400">
+            <p className="text-base md:text-lg italic serif">21 de agosto de 2027</p>
+            <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-stone-200" />
             <div className="flex gap-4">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C6A75E]">
                 {metrics.confirmedCount} Invitados
@@ -136,26 +136,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
         </div>
 
         {/* Countdown Visualizer */}
-        <div className="bg-white px-10 py-6 rounded-[2.5rem] shadow-xl border border-stone-100 flex items-center gap-10">
+        <div className="bg-white px-6 md:px-10 py-5 md:py-6 rounded-[2rem] md:rounded-[2.5rem] shadow-xl border border-stone-100 flex items-center justify-around md:justify-center gap-4 md:gap-10">
           <div className="text-center group">
-            <span className="block text-4xl font-bold text-stone-800 group-hover:text-[#C6A75E] transition-colors">{timeLeft.days}</span>
-            <span className="text-[9px] uppercase font-bold text-stone-400 tracking-[0.2em]">Días</span>
+            <span className="block text-2xl md:text-4xl font-bold text-stone-800 group-hover:text-[#C6A75E] transition-colors">{timeLeft.days}</span>
+            <span className="text-[8px] md:text-[9px] uppercase font-bold text-stone-400 tracking-[0.2em]">Días</span>
           </div>
-          <div className="w-px h-10 bg-stone-100" />
+          <div className="w-px h-8 md:h-10 bg-stone-100" />
           <div className="text-center group">
-            <span className="block text-4xl font-bold text-stone-800 group-hover:text-[#C6A75E] transition-colors">{timeLeft.hours}</span>
-            <span className="text-[9px] uppercase font-bold text-stone-400 tracking-[0.2em]">Horas</span>
+            <span className="block text-2xl md:text-4xl font-bold text-stone-800 group-hover:text-[#C6A75E] transition-colors">{timeLeft.hours}</span>
+            <span className="text-[8px] md:text-[9px] uppercase font-bold text-stone-400 tracking-[0.2em]">Horas</span>
           </div>
-          <div className="w-px h-10 bg-stone-100" />
+          <div className="w-px h-8 md:h-10 bg-stone-100" />
           <div className="text-center group">
-            <span className="block text-4xl font-bold text-stone-800 group-hover:text-[#C6A75E] transition-colors">{timeLeft.minutes}</span>
-            <span className="text-[9px] uppercase font-bold text-stone-400 tracking-[0.2em]">Min</span>
+            <span className="block text-2xl md:text-4xl font-bold text-stone-800 group-hover:text-[#C6A75E] transition-colors">{timeLeft.minutes}</span>
+            <span className="text-[8px] md:text-[9px] uppercase font-bold text-stone-400 tracking-[0.2em]">Min</span>
           </div>
         </div>
       </header>
 
       {/* General Health Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <StatusCard 
           icon={<Users size={20} />} 
           title="Invitados" 
@@ -183,7 +183,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
         <StatusCard 
           icon={<CheckCircle2 size={20} />} 
           title="Checklist" 
-          primary={`${Math.round((metrics.completedTasks / data.tasks.length) * 100)}% Completado`} 
+          primary={`${data.tasks.length > 0 ? Math.round((metrics.completedTasks / data.tasks.length) * 100) : 0}% Completado`} 
           secondary={`${metrics.completedTasks} de ${data.tasks.length} tareas`}
           alert={metrics.nextTask ? `Prox: ${metrics.nextTask.title}` : undefined}
           color="bg-[#0F1A2E]"
@@ -196,33 +196,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
         <div className="lg:col-span-2 space-y-8">
           {/* Priority Action Card */}
           {priorityAction && (
-            <div className={`p-8 rounded-[2.5rem] border flex items-center gap-6 shadow-sm transition-all hover:shadow-md ${
+            <div className={`p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border flex flex-col sm:flex-row items-center gap-6 shadow-sm transition-all hover:shadow-md ${
               priorityAction.type === 'error' ? 'bg-rose-50 border-rose-100' : 
               (priorityAction.type === 'warning' ? 'bg-amber-50 border-amber-100' : 'bg-blue-50 border-blue-100')
             }`}>
-              <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-sm shrink-0">
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-white flex items-center justify-center shadow-sm shrink-0">
                 {priorityAction.icon}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 text-center sm:text-left">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-1">Acción Prioritaria</p>
-                <h4 className="text-xl font-bold text-stone-800 serif">{priorityAction.title}</h4>
+                <h4 className="text-lg md:text-xl font-bold text-stone-800 serif">{priorityAction.title}</h4>
                 <p className="text-sm text-stone-500 mt-1">{priorityAction.desc}</p>
               </div>
-              <button className="px-6 py-3 bg-white rounded-xl text-xs font-bold text-stone-800 shadow-sm hover:shadow-md transition-all active:scale-95">
+              <button className="w-full sm:w-auto px-6 py-3 bg-white rounded-xl text-xs font-bold text-stone-800 shadow-sm hover:shadow-md transition-all active:scale-95">
                 Resolver ahora
               </button>
             </div>
           )}
 
           {/* Key Vendor Matrix */}
-          <section className="bg-white p-10 rounded-[2.5rem] border border-stone-100 shadow-sm">
+          <section className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] border border-stone-100 shadow-sm">
              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-2xl font-bold text-stone-800 serif">Proveedores Clave</h3>
+                <h3 className="text-xl md:text-2xl font-bold text-stone-800 serif">Proveedores Clave</h3>
                 <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Estado Crítico</span>
              </div>
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {keyVendors.map((item, idx) => (
-                  <div key={idx} className="p-6 rounded-3xl border border-stone-50 hover:bg-stone-50 transition-colors group">
+                  <div key={idx} className="p-5 md:p-6 rounded-2xl md:rounded-3xl border border-stone-50 hover:bg-stone-50 transition-colors group">
                     <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-3">{item.label}</p>
                     <div className="flex items-center justify-between">
                        <h5 className="font-bold text-stone-800 text-sm truncate max-w-[120px]">
@@ -243,9 +243,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
           </section>
 
           {/* Financial Bar Chart */}
-          <section className="bg-white p-10 rounded-[2.5rem] border border-stone-100 shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-               <h3 className="text-2xl font-bold text-stone-800 serif">Flujo de Presupuesto</h3>
+          <section className="bg-white p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] border border-stone-100 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+               <h3 className="text-xl md:text-2xl font-bold text-stone-800 serif">Flujo de Presupuesto</h3>
                <div className="flex gap-4">
                   <div className="flex items-center gap-2">
                      <div className="w-2 h-2 rounded-full bg-[#0F1A2E]" />
@@ -271,27 +271,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
                </div>
                <div className="flex justify-between text-stone-400 text-[10px] font-bold uppercase tracking-widest px-2">
                   <span>0%</span>
-                  <span>50%</span>
+                  <span className="hidden sm:inline">50%</span>
                   <span>100% Presupuesto</span>
                </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mt-10 pt-8 border-t border-stone-50">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mt-10 pt-8 border-t border-stone-50">
                <div>
                   <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Pagado</p>
-                  <p className="text-xl font-bold text-stone-800">${metrics.totalPaid.toLocaleString()}</p>
+                  <p className="text-lg md:text-xl font-bold text-stone-800">${metrics.totalPaid.toLocaleString()}</p>
                </div>
                <div>
                   <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Por Pagar</p>
-                  <p className="text-xl font-bold text-stone-800">${(metrics.committedBudget - metrics.totalPaid).toLocaleString()}</p>
+                  <p className="text-lg md:text-xl font-bold text-stone-800">${(metrics.committedBudget - metrics.totalPaid).toLocaleString()}</p>
                </div>
                <div>
                   <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Disponible</p>
-                  <p className="text-xl font-bold text-[#C6A75E]">${Math.max(0, metrics.availableBudget).toLocaleString()}</p>
+                  <p className="text-lg md:text-xl font-bold text-[#C6A75E]">${Math.max(0, metrics.availableBudget).toLocaleString()}</p>
                </div>
                <div className="text-right">
                   <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">Ejecución</p>
-                  <p className="text-xl font-bold text-stone-800">{Math.round((metrics.committedBudget / metrics.totalBudget) * 100)}%</p>
+                  <p className="text-lg md:text-xl font-bold text-stone-800">{Math.round((metrics.committedBudget / metrics.totalBudget) * 100)}%</p>
                </div>
             </div>
           </section>

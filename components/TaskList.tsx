@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { ICONS, COLORS } from '../constants';
 import { Task } from '../types';
+import { Modal } from './Modal';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -23,9 +24,10 @@ interface TaskListProps {
   onToggleTask: (id: string) => void;
   onAddTask: (task: Omit<Task, 'id' | 'completed'>) => void;
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
+  onRemoveTask: (id: string) => void;
 }
 
-export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTask, onUpdateTask }) => {
+export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTask, onUpdateTask, onRemoveTask }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,7 +39,7 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
   // Estado para el calendario personalizado
   const [viewDate, setViewDate] = useState(new Date());
 
-  const daysOfWeek = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+  const daysOfWeek = ['D', 'L', 'M', 'Mi', 'J', 'V', 'S'];
   const months = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
@@ -140,7 +142,7 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
       </div>
 
       {/* Strategic Summary Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <TaskSummaryCard 
           label="Críticas" 
           value={metrics.highPriority} 
@@ -174,8 +176,8 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
       </div>
 
       {/* Toolbar - Search */}
-      <div className="flex items-center justify-between bg-white p-4 rounded-[2rem] border border-stone-100 shadow-sm">
-        <div className="relative w-full max-w-md">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-[2rem] border border-stone-100 shadow-sm">
+        <div className="relative w-full md:max-w-md">
           <input 
             type="text" 
             placeholder="Buscar tarea por nombre..."
@@ -185,7 +187,7 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
           />
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
         </div>
-        <div className="hidden md:flex gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
            <FilterBtn label="Todas" active />
            <FilterBtn label="Pendientes" />
            <FilterBtn label="Completas" />
@@ -197,48 +199,53 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
         {filteredTasks.map((task) => (
           <div 
             key={task.id} 
-            className={`group flex items-center gap-6 p-6 bg-white border border-stone-100 rounded-[2rem] shadow-sm transition-all hover:shadow-md hover:border-[#C6A75E]/20 ${task.completed ? 'opacity-60' : ''}`}
+            className={`group flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 p-6 bg-white border border-stone-100 rounded-[2rem] shadow-sm transition-all hover:shadow-md hover:border-[#C6A75E]/20 ${task.completed ? 'opacity-60' : ''}`}
           >
-            {/* Elegant Checkbox */}
-            <button 
-              onClick={() => onToggleTask(task.id)}
-              className={`w-10 h-10 rounded-2xl border-2 flex items-center justify-center transition-all shrink-0 ${
-                task.completed 
-                  ? 'bg-emerald-500 border-emerald-500 shadow-lg shadow-emerald-100' 
-                  : 'bg-white border-stone-100 group-hover:border-[#C6A75E]'
-              }`}
-            >
-              {task.completed && <CheckCircle2 size={20} className="text-white" />}
-            </button>
+            <div className="flex items-center gap-4 sm:gap-6">
+              {/* Elegant Checkbox */}
+              <button 
+                onClick={() => onToggleTask(task.id)}
+                className={`w-10 h-10 rounded-2xl border-2 flex items-center justify-center transition-all shrink-0 ${
+                  task.completed 
+                    ? 'bg-emerald-500 border-emerald-500 shadow-lg shadow-emerald-100' 
+                    : 'bg-white border-stone-100 group-hover:border-[#C6A75E]'
+                }`}
+              >
+                {task.completed && <CheckCircle2 size={20} className="text-white" />}
+              </button>
 
-            <div className="flex-1 min-w-0">
-               <h4 className={`text-lg font-bold serif transition-all ${task.completed ? 'text-stone-400 line-through' : 'text-stone-800'}`}>
-                 {task.title}
-               </h4>
-               <div className="flex items-center gap-4 mt-1.5">
-                  <div className="flex items-center gap-1.5 text-stone-400">
-                    <CalendarIcon size={12} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">
-                      Vence el {new Date(task.dueDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                    </span>
-                  </div>
-                  {new Date(task.dueDate) < new Date() && !task.completed && (
-                    <span className="text-[9px] font-bold text-rose-500 uppercase bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100">Vencida</span>
-                  )}
-               </div>
+              <div className="flex-1 min-w-0">
+                 <h4 className={`text-base md:text-lg font-bold serif transition-all ${task.completed ? 'text-stone-400 line-through' : 'text-stone-800'}`}>
+                   {task.title}
+                 </h4>
+                 <div className="flex items-center gap-4 mt-1.5">
+                    <div className="flex items-center gap-1.5 text-stone-400">
+                      <CalendarIcon size={12} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">
+                        {new Date(task.dueDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                      </span>
+                    </div>
+                    {new Date(task.dueDate) < new Date() && !task.completed && (
+                      <span className="text-[9px] font-bold text-rose-500 uppercase bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100">Vencida</span>
+                    )}
+                 </div>
+              </div>
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 mt-2 sm:mt-0 ml-14 sm:ml-0">
               <PriorityBadge priority={task.priority} />
               
-              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+              <div className="flex items-center gap-2 md:opacity-0 group-hover:opacity-100 transition-all">
                 <button 
                   onClick={() => openEditModal(task)}
                   className="p-3 text-stone-300 hover:text-[#0F1A2E] hover:bg-stone-50 rounded-xl transition-all shadow-sm"
                 >
                   {ICONS.Edit}
                 </button>
-                <button className="p-3 text-stone-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                <button 
+                  onClick={() => onRemoveTask(task.id)}
+                  className="p-3 text-stone-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                >
                   <ICONS.Trash.type {...ICONS.Trash.props} size={16} />
                 </button>
               </div>
@@ -257,131 +264,119 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
       </div>
 
       {/* Modal Redesign: Nueva Tarea */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-stone-900/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden border border-stone-200 animate-in zoom-in-95 duration-300">
-            <div className="p-10 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
-              <div>
-                <h3 className="text-3xl font-bold text-stone-900 serif">{editingTaskId ? 'Detalle de Tarea' : 'Nueva Tarea'}</h3>
-                <p className="text-[10px] text-stone-500 uppercase tracking-[0.2em] font-bold mt-1">Agrega una acción y mantén el control del evento</p>
-              </div>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="p-3 bg-white hover:bg-stone-100 text-stone-300 rounded-2xl shadow-sm transition-all hover:text-stone-600"
-              >
-                <X size={24} />
-              </button>
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        title={editingTaskId ? 'Detalle de Tarea' : 'Nueva Tarea'}
+        subtitle="Agrega una acción y mantén el control del evento"
+      >
+        <form onSubmit={handleSave} className="space-y-8">
+          {/* Bloque: Información Básica */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 px-1">
+               <ICONS.AI.type {...ICONS.AI.props} size={14} className="text-[#C6A75E]" />
+               <h4 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Información Básica</h4>
             </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest ml-1">¿Qué hay que hacer?</label>
+              <input 
+                type="text" required value={title} 
+                onChange={e => setTitle(e.target.value)} 
+                placeholder="Ej: Contratar transporte para invitados, sesión de fotos..."
+                className="w-full px-6 py-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:border-[#C6A75E] focus:bg-white text-sm font-semibold text-stone-800 transition-all shadow-inner"
+              />
+            </div>
+          </div>
 
-            <form onSubmit={handleSave} className="p-10 space-y-8 bg-white">
-              {/* Bloque: Información Básica */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-2 px-1">
-                   <ICONS.AI.type {...ICONS.AI.props} size={14} className="text-[#C6A75E]" />
-                   <h4 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Información Básica</h4>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest ml-1">¿Qué hay que hacer?</label>
-                  <input 
-                    type="text" required value={title} 
-                    onChange={e => setTitle(e.target.value)} 
-                    placeholder="Ej: Contratar transporte para invitados, sesión de fotos..."
-                    className="w-full px-6 py-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:border-[#C6A75E] focus:bg-white text-sm font-semibold text-stone-800 transition-all shadow-inner"
-                  />
-                </div>
+          {/* Layout Dos Columnas: Gestión */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-4 border-t border-stone-50">
+            {/* Columna: Fecha */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1">
+                 <CalendarIcon size={14} className="text-[#C6A75E]" />
+                 <h4 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Fecha Límite</h4>
               </div>
-
-              {/* Layout Dos Columnas: Gestión */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-4 border-t border-stone-50">
-                {/* Columna: Fecha */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 px-1">
-                     <CalendarIcon size={14} className="text-[#C6A75E]" />
-                     <h4 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Fecha Límite</h4>
-                  </div>
-                  
-                  <div className="bg-stone-50 p-6 rounded-[2rem] border border-stone-100 shadow-inner">
-                    <div className="flex items-center justify-between mb-4">
-                      <button type="button" onClick={() => changeMonth(-1)} className="p-2 hover:bg-white rounded-xl transition-all text-stone-400"><ChevronLeft size={16} /></button>
-                      <span className="text-[11px] font-bold text-stone-800 uppercase tracking-tighter">{months[viewDate.getMonth()]} {viewDate.getFullYear()}</span>
-                      <button type="button" onClick={() => changeMonth(1)} className="p-2 hover:bg-white rounded-xl transition-all text-stone-400"><ChevronRight size={16} /></button>
-                    </div>
-
-                    <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                      {daysOfWeek.map(d => <span key={d} className="text-[9px] font-bold text-stone-300">{d}</span>)}
-                    </div>
-
-                    <div className="grid grid-cols-7 gap-1.5 text-center">
-                      {calendarDays.map((day, idx) => {
-                        if (day === null) return <div key={`empty-${idx}`} />;
-                        const dateStr = `${viewDate.getFullYear()}-${(viewDate.getMonth() + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-                        const isSelected = dueDate === dateStr;
-
-                        return (
-                          <button
-                            key={idx} type="button" onClick={() => handleDateSelect(day)}
-                            className={`h-9 w-9 text-[11px] font-bold rounded-xl flex items-center justify-center transition-all ${
-                              isSelected 
-                                ? 'bg-[#0F1A2E] text-white shadow-xl scale-110' 
-                                : 'hover:bg-white text-stone-600'
-                            }`}
-                          >
-                            {day}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="px-1 flex items-center justify-between">
-                     <span className="text-[9px] font-bold text-stone-400 uppercase">Selección:</span>
-                     <span className="text-[10px] font-bold text-[#C6A75E]">{dueDate}</span>
-                  </div>
+              
+              <div className="bg-stone-50 p-6 rounded-[2rem] border border-stone-100 shadow-inner">
+                <div className="flex items-center justify-between mb-4">
+                  <button type="button" onClick={() => changeMonth(-1)} className="p-2 hover:bg-white rounded-xl transition-all text-stone-400"><ChevronLeft size={16} /></button>
+                  <span className="text-[11px] font-bold text-stone-800 uppercase tracking-tighter">{months[viewDate.getMonth()]} {viewDate.getFullYear()}</span>
+                  <button type="button" onClick={() => changeMonth(1)} className="p-2 hover:bg-white rounded-xl transition-all text-stone-400"><ChevronRight size={16} /></button>
                 </div>
 
-                {/* Columna: Prioridad */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 px-1">
-                     <Flag size={14} className="text-[#C6A75E]" />
-                     <h4 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Prioridad Estratégica</h4>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    {(['Low', 'Medium', 'High'] as const).map((p) => (
+                <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                  {daysOfWeek.map(d => <span key={d} className="text-[9px] font-bold text-stone-300">{d}</span>)}
+                </div>
+
+                <div className="grid grid-cols-7 gap-1.5 text-center">
+                  {calendarDays.map((day, idx) => {
+                    if (day === null) return <div key={`empty-${idx}`} />;
+                    const dateStr = `${viewDate.getFullYear()}-${(viewDate.getMonth() + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                    const isSelected = dueDate === dateStr;
+
+                    return (
                       <button
-                        key={p} type="button" onClick={() => setPriority(p)}
-                        className={`w-full py-4 px-6 rounded-2xl border-2 text-[11px] font-bold transition-all text-left flex items-center justify-between uppercase tracking-wider ${
-                          priority === p 
-                            ? 'bg-[#0F1A2E] text-white border-transparent shadow-xl' 
-                            : 'bg-stone-50 text-stone-400 border-stone-100 hover:bg-stone-100 hover:text-stone-600'
+                        key={`day-${idx}`} type="button" onClick={() => handleDateSelect(day)}
+                        className={`h-9 w-9 text-[11px] font-bold rounded-xl flex items-center justify-center transition-all ${
+                          isSelected 
+                            ? 'bg-[#0F1A2E] text-white shadow-xl scale-110' 
+                            : 'hover:bg-white text-stone-600'
                         }`}
                       >
-                        {p === 'High' ? 'Crítica' : (p === 'Medium' ? 'Media' : 'Informativa')}
-                        <ArrowRight size={14} className={priority === p ? 'opacity-100' : 'opacity-0'} />
+                        {day}
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
-
-              {/* Botonera */}
-              <div className="flex gap-4 pt-6">
-                <button 
-                  type="button" onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-5 border-2 border-stone-100 rounded-[1.8rem] text-stone-400 font-bold text-sm hover:bg-stone-50 transition-all active:scale-95"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="submit"
-                  className="flex-[2] py-5 text-white font-bold rounded-[1.8rem] shadow-2xl hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 tracking-[0.2em] uppercase text-xs"
-                  style={{ backgroundColor: COLORS.accent }}
-                >
-                  {editingTaskId ? 'Actualizar Tarea' : 'Crear Tarea'}
-                </button>
+              <div className="px-1 flex items-center justify-between">
+                 <span className="text-[9px] font-bold text-stone-400 uppercase">Selección:</span>
+                 <span className="text-[10px] font-bold text-[#C6A75E]">{dueDate}</span>
               </div>
-            </form>
+            </div>
+
+            {/* Columna: Prioridad */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 px-1">
+                 <Flag size={14} className="text-[#C6A75E]" />
+                 <h4 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Prioridad Estratégica</h4>
+              </div>
+              <div className="flex flex-col gap-3">
+                {(['Low', 'Medium', 'High'] as const).map((p) => (
+                  <button
+                    key={p} type="button" onClick={() => setPriority(p)}
+                    className={`w-full py-4 px-6 rounded-2xl border-2 text-[11px] font-bold transition-all text-left flex items-center justify-between uppercase tracking-wider ${
+                      priority === p 
+                        ? 'bg-[#0F1A2E] text-white border-transparent shadow-xl' 
+                        : 'bg-stone-50 text-stone-400 border-stone-100 hover:bg-stone-100 hover:text-stone-600'
+                    }`}
+                  >
+                    {p === 'High' ? 'Crítica' : (p === 'Medium' ? 'Media' : 'Informativa')}
+                    <ArrowRight size={14} className={priority === p ? 'opacity-100' : 'opacity-0'} />
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+
+          {/* Botonera */}
+          <div className="flex gap-4 pt-6">
+            <button 
+              type="button" onClick={() => setIsModalOpen(false)}
+              className="flex-1 py-5 border-2 border-stone-100 rounded-[1.8rem] text-stone-400 font-bold text-sm hover:bg-stone-50 transition-all active:scale-95"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit"
+              className="flex-[2] py-5 text-white font-bold rounded-[1.8rem] shadow-2xl hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 tracking-[0.2em] uppercase text-xs"
+              style={{ backgroundColor: COLORS.accent }}
+            >
+              {editingTaskId ? 'Actualizar Tarea' : 'Crear Tarea'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState } from 'react';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { GuestList } from './components/GuestList';
@@ -9,151 +9,209 @@ import { SeatingPlanner } from './components/SeatingPlanner';
 import { VendorManager } from './components/VendorManager';
 import { Login } from './components/Login';
 import { ElegantLoader } from './components/ElegantLoader';
-import { WeddingData, Guest, Table, BudgetItem, Task, Vendor, UserProfile } from './types';
-import { INITIAL_GUESTS, INITIAL_EXPENSES, INITIAL_TASKS, INITIAL_TABLES, INITIAL_VENDORS, COLORS } from './constants';
-import { supabase } from './lib/supabaseClient';
+import { AlertCircle } from 'lucide-react';
+import { Guest, Table, BudgetItem, Task, Vendor } from './types';
+import { 
+  createGuest, 
+  updateGuest, 
+  deleteGuest,
+  createTable,
+  updateTable,
+  deleteTable,
+  createVendor,
+  updateVendor,
+  deleteVendor,
+  createBudgetItem,
+  updateBudgetItem,
+  deleteBudgetItem,
+  createTask,
+  updateTask,
+  deleteTask,
+  updateWedding
+} from './services/supabase';
+import { AuthProvider, useAuth } from './src/lib/AuthContext';
+import { WeddingDataProvider, useWeddingData } from './src/lib/WeddingDataContext';
 
-const STORAGE_KEY = 'endless_love_wedding_data';
-
-// --- Contexto de Autenticación ---
-interface AuthContextType {
-  authUser: any | null;
-  userProfile: UserProfile | null;
-  loading: boolean;
-  signOut: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth debe usarse dentro de AuthProvider');
-  return context;
-};
-
-const App: React.FC = () => {
-  const [authUser, setAuthUser] = useState<any | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+const AppContent: React.FC = () => {
+  const { authUser, userProfile, loading: authLoading, signOut } = useAuth();
+  const { weddingData, loading: dataLoading, error: dataError, refetchAll, setWeddingData } = useWeddingData();
   const [activeTab, setActiveTab] = useState('dashboard');
-  
-  const [weddingData, setWeddingData] = useState<WeddingData>(() => {
-    const savedData = localStorage.getItem(STORAGE_KEY);
-    if (savedData) {
-      try { return JSON.parse(savedData); } catch (e) { console.error("Error local storage", e); }
-    }
-    return {
-      partner1: 'Camilo', partner2: 'Valentina', date: '2027-08-21', budget: 35000,
-      guests: INITIAL_GUESTS, expenses: INITIAL_EXPENSES, tasks: INITIAL_TASKS,
-      tables: INITIAL_TABLES, vendors: INITIAL_VENDORS
-    };
-  });
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  // Persistencia local de la data de la boda (mock por ahora)
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(weddingData));
-  }, [weddingData]);
+  const weddingId = userProfile?.wedding_id;
 
-  // --- Lógica de Perfil ---
-  const fetchOrCreateProfile = async (userId: string, email: string) => {
+  // --- Handlers de Datos con Supabase ---
+  const handleAddGuest = async (guest: Omit<Guest, 'id'>) => {
+    if (!weddingId) return;
+    setActionError(null);
+    console.log("CREATE_GUEST_START", { weddingId, payload: guest });
     try {
-      let { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-
+      const { error } = await createGuest(guest, weddingId);
       if (error) throw error;
-
-      if (!profile) {
-        const { data: newProfile, error: insertError } = await supabase
-          .from('profiles')
-          .insert({ id: userId, email, role: 'admin', full_name: '' })
-          .select()
-          .single();
-        if (insertError) throw insertError;
-        profile = newProfile;
-      }
-      setUserProfile(profile as UserProfile);
-    } catch (err) {
-      console.error('[Profiles Sync Error]:', err);
+      console.log("CREATE_GUEST_OK");
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("CREATE_GUEST_ERROR", error);
+      setActionError("No se pudo guardar el invitado.");
     }
   };
 
-  // --- Ciclo de Vida de Autenticación ---
-  useEffect(() => {
-    const initializeAuth = async () => {
-      setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        setAuthUser(session.user);
-        await fetchOrCreateProfile(session.user.id, session.user.email || '');
+  const handleRemoveGuest = async (id: string) => {
+    if (!weddingId) return;
+    setActionError(null);
+    try {
+      const { error } = await deleteGuest(id, weddingId);
+      if (error) throw error;
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("DELETE_GUEST_ERROR", error);
+      setActionError("No se pudo eliminar el invitado.");
+    }
+  };
+
+  const handleUpdateGuest = async (id: string, updates: Partial<Guest>) => {
+    if (!weddingId) return;
+    setActionError(null);
+    try {
+      const { error } = await updateGuest(id, updates as any, weddingId);
+      if (error) throw error;
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("UPDATE_GUEST_ERROR", error);
+      setActionError("No se pudo actualizar el invitado.");
+    }
+  };
+
+  const handleToggleTask = async (id: string) => {
+    if (!weddingId) return;
+    const task = weddingData.tasks.find(t => t.id === id);
+    if (task) {
+      try {
+        const { error } = await updateTask(id, { completed: !task.completed }, weddingId);
+        if (error) throw error;
+        await refetchAll(weddingId);
+      } catch (error) {
+        console.error("TOGGLE_TASK_ERROR", error);
       }
-      
-      setLoading(false);
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          setAuthUser(session.user);
-          await fetchOrCreateProfile(session.user.id, session.user.email || '');
-        } else if (event === 'SIGNED_OUT') {
-          setAuthUser(null);
-          setUserProfile(null);
-          setActiveTab('dashboard');
-        }
-      });
-
-      return () => subscription.unsubscribe();
-    };
-
-    initializeAuth();
-  }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+    }
   };
 
-  // --- Handlers de Datos (Sin cambios en lógica de negocio) ---
-  const handleAddGuest = (guest: Omit<Guest, 'id'>) => {
-    const newGuest = { ...guest, id: Math.random().toString(36).substr(2, 9) };
-    setWeddingData(prev => ({ ...prev, guests: [...prev.guests, newGuest] }));
+  const handleAddTask = async (task: Omit<Task, 'id' | 'completed'>) => {
+    if (!weddingId) return;
+    setActionError(null);
+    try {
+      const { error } = await createTask({ ...task, completed: false }, weddingId);
+      if (error) throw error;
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("CREATE_TASK_ERROR", error);
+      setActionError("No se pudo guardar la tarea.");
+    }
   };
-  const handleRemoveGuest = (id: string) => {
-    setWeddingData(prev => ({ ...prev, guests: prev.guests.filter(g => g.id !== id) }));
+
+  const handleUpdateTask = async (id: string, updates: Partial<Task>) => {
+    if (!weddingId) return;
+    try {
+      const { error } = await updateTask(id, updates, weddingId);
+      if (error) throw error;
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("UPDATE_TASK_ERROR", error);
+    }
   };
-  const handleUpdateGuest = (id: string, updates: Partial<Guest>) => {
-    setWeddingData(prev => ({ ...prev, guests: prev.guests.map(g => g.id === id ? { ...g, ...updates } : g) }));
+
+  const handleRemoveTask = async (id: string) => {
+    if (!weddingId) return;
+    try {
+      const { error } = await deleteTask(id, weddingId);
+      if (error) throw error;
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("DELETE_TASK_ERROR", error);
+    }
   };
-  const handleToggleTask = (id: string) => {
-    setWeddingData(prev => ({ ...prev, tasks: prev.tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t) }));
+
+  const handleUpdateTables = async (tables: Table[]) => {
+    if (!weddingId) return;
+    try {
+      for (const table of tables) {
+        const { error } = await updateTable(table.id, table, weddingId);
+        if (error) throw error;
+      }
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("UPDATE_TABLES_ERROR", error);
+    }
   };
-  const handleAddTask = (task: Omit<Task, 'id' | 'completed'>) => {
-    const newTask: Task = { ...task, id: Math.random().toString(36).substr(2, 9), completed: false };
-    setWeddingData(prev => ({ ...prev, tasks: [...prev.tasks, newTask] }));
+
+  const handleAddExpense = async (item: Omit<BudgetItem, 'id'>) => {
+    if (!weddingId) return;
+    setActionError(null);
+    try {
+      const { error } = await createBudgetItem(item, weddingId);
+      if (error) throw error;
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("CREATE_EXPENSE_ERROR", error);
+      setActionError("No se pudo guardar el gasto.");
+    }
   };
-  const handleUpdateTask = (id: string, updates: Partial<Task>) => {
-    setWeddingData(prev => ({ ...prev, tasks: prev.tasks.map(t => t.id === id ? { ...t, ...updates } : t) }));
+
+  const handleRemoveExpense = async (id: string) => {
+    if (!weddingId) return;
+    try {
+      const { error } = await deleteBudgetItem(id, weddingId);
+      if (error) throw error;
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("DELETE_EXPENSE_ERROR", error);
+    }
   };
-  const handleUpdateTables = (tables: Table[]) => {
-    setWeddingData(prev => ({ ...prev, tables }));
+
+  const handleUpdateBudget = async (value: number) => {
+    if (!weddingId) return;
+    try {
+      const { error } = await updateWedding(weddingId, { total_budget: value });
+      if (error) throw error;
+      setWeddingData(prev => ({ ...prev, budget: value }));
+    } catch (error) {
+      console.error("UPDATE_BUDGET_ERROR", error);
+    }
   };
-  const handleAddExpense = (item: Omit<BudgetItem, 'id'>) => {
-    const newItem = { ...item, id: Math.random().toString(36).substr(2, 9) };
-    setWeddingData(prev => ({ ...prev, expenses: [...prev.expenses, newItem] }));
+
+  const handleAddVendor = async (vendor: Omit<Vendor, 'id'> & { pdfFile?: File }) => {
+    if (!weddingId) return;
+    setActionError(null);
+    try {
+      const { error } = await createVendor(vendor, weddingId);
+      if (error) throw error;
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("CREATE_VENDOR_ERROR", error);
+      setActionError("No se pudo guardar el proveedor.");
+    }
   };
-  const handleUpdateBudget = (value: number) => {
-    setWeddingData(prev => ({ ...prev, budget: value }));
+
+  const handleUpdateVendor = async (id: string, updates: Partial<Vendor> & { pdfFile?: File }) => {
+    if (!weddingId) return;
+    try {
+      const { error } = await updateVendor(id, updates, weddingId);
+      if (error) throw error;
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("UPDATE_VENDOR_ERROR", error);
+    }
   };
-  const handleAddVendor = (vendor: Omit<Vendor, 'id'>) => {
-    const newVendor = { ...vendor, id: Math.random().toString(36).substr(2, 9) };
-    setWeddingData(prev => ({ ...prev, vendors: [...prev.vendors, newVendor] }));
-  };
-  const handleUpdateVendor = (id: string, updates: Partial<Vendor>) => {
-    setWeddingData(prev => ({ ...prev, vendors: prev.vendors.map(v => v.id === id ? { ...v, ...updates } : v) }));
-  };
-  const handleRemoveVendor = (id: string) => {
-    setWeddingData(prev => ({ ...prev, vendors: prev.vendors.filter(v => v.id !== id) }));
+
+  const handleRemoveVendor = async (id: string) => {
+    if (!weddingId) return;
+    try {
+      const { error } = await deleteVendor(id, weddingId);
+      if (error) throw error;
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("DELETE_VENDOR_ERROR", error);
+    }
   };
 
   const renderContent = () => {
@@ -162,22 +220,70 @@ const App: React.FC = () => {
       case 'guests': return <GuestList guests={weddingData.guests} tables={weddingData.tables} onAddGuest={handleAddGuest} onRemoveGuest={handleRemoveGuest} onUpdateGuest={handleUpdateGuest} />;
       case 'seating': return <SeatingPlanner tables={weddingData.tables} guests={weddingData.guests} onUpdateTables={handleUpdateTables} />;
       case 'vendors': return <VendorManager vendors={weddingData.vendors} onAddVendor={handleAddVendor} onUpdateVendor={handleUpdateVendor} onRemoveVendor={handleRemoveVendor} />;
-      case 'budget': return <BudgetTracker expenses={weddingData.expenses} totalBudget={weddingData.budget} onAddExpense={handleAddExpense} onUpdateBudget={handleUpdateBudget} />;
-      case 'tasks': return <TaskList tasks={weddingData.tasks} onToggleTask={handleToggleTask} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} />;
+      case 'budget': return <BudgetTracker expenses={weddingData.expenses} totalBudget={weddingData.budget} onAddExpense={handleAddExpense} onUpdateBudget={handleUpdateBudget} onRemoveExpense={handleRemoveExpense} />;
+      case 'tasks': return <TaskList tasks={weddingData.tasks} onToggleTask={handleToggleTask} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onRemoveTask={handleRemoveTask} />;
       default: return <Dashboard data={weddingData} />;
     }
   };
 
-  if (loading) return <ElegantLoader />;
-
+  if (authLoading) return <ElegantLoader />;
   if (!authUser) return <Login />;
 
+  if (!userProfile) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-white">
+        <ElegantLoader />
+        <p className="mt-4 text-stone-400 text-xs font-bold uppercase tracking-[0.3em] animate-pulse">
+          Cargando tu suite...
+        </p>
+      </div>
+    );
+  }
+
+  if (!userProfile.wedding_id) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-stone-50 p-6 text-center">
+        <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mb-6">
+          <AlertCircle size={32} className="text-rose-500" />
+        </div>
+        <h2 className="text-xl font-bold text-[#0F1A2E] serif mb-2">Configuración Incompleta</h2>
+        <p className="text-stone-500 text-sm max-w-md mb-8">
+          Tu perfil no tiene un wedding_id asignado.
+        </p>
+        <button onClick={signOut} className="px-8 py-3 bg-[#0F1A2E] text-white rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-opacity-90 transition-all">
+          Cerrar Sesión
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <AuthContext.Provider value={{ authUser, userProfile, loading, signOut: handleLogout }}>
-      <Layout activeTab={activeTab} setActiveTab={setActiveTab} onLogout={handleLogout} data={weddingData}>
-        {renderContent()}
-      </Layout>
-    </AuthContext.Provider>
+    <Layout activeTab={activeTab} setActiveTab={setActiveTab} onLogout={signOut} data={weddingData}>
+      {(dataError || actionError) && (
+        <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl mb-6 flex items-center justify-center gap-3 text-rose-600 text-xs font-bold uppercase tracking-widest animate-in fade-in slide-in-from-top-2">
+          <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+          {dataError || actionError}
+        </div>
+      )}
+      {renderContent()}
+    </Layout>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AuthContextConsumer />
+    </AuthProvider>
+  );
+};
+
+const AuthContextConsumer: React.FC = () => {
+  const { userProfile } = useAuth();
+  return (
+    <WeddingDataProvider weddingId={userProfile?.wedding_id || null}>
+      <AppContent />
+    </WeddingDataProvider>
   );
 };
 

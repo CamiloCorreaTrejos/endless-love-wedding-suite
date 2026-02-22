@@ -2,6 +2,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { ICONS, COLORS } from '../constants';
 import { Table, Guest, GuestMember } from '../types';
+import { Modal } from './Modal';
 import { 
   Search, RotateCcw, Maximize2, Trash2, Layers, ZoomIn, ZoomOut, 
   Maximize, UserCheck, UserMinus, Plus, MoveHorizontal, MoveVertical,
@@ -254,7 +255,7 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
       </div>
 
       {/* Strategic Metrics Header */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 shrink-0 px-1">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 shrink-0 px-1">
         <MetricBox label="Mesas Totales" value={metrics.totalTables} icon={<Layers size={18} />} color="bg-stone-50" />
         <MetricBox label="Capacidad" value={metrics.totalCapacity} icon={<Users size={18} />} color="bg-stone-50" />
         <MetricBox label="Asignados" value={metrics.assignedCount} icon={<CheckCircle2 size={18} />} color="bg-emerald-50" textColor="text-emerald-700" />
@@ -262,10 +263,10 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
       </div>
 
       {/* Main Workspace - Adjusted Proportions 75/25 */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-8 min-h-[600px] relative px-1">
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 md:gap-8 min-h-[600px] relative px-1">
         
         {/* Editor Toolbar & Canvas (75% Width) */}
-        <div className="flex-[3] flex flex-col gap-4 min-h-0 bg-white rounded-[3rem] border border-stone-100 shadow-sm overflow-hidden p-4">
+        <div className="flex-[3] flex flex-col gap-4 min-h-[400px] md:min-h-0 bg-white rounded-[2rem] md:rounded-[3rem] border border-stone-100 shadow-sm overflow-hidden p-3 md:p-4">
           
           {/* Top Tools Selector - More Compact */}
           <div className="flex items-center justify-between px-2 pb-3 border-b border-stone-50 overflow-x-auto no-scrollbar">
@@ -279,18 +280,18 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
               <ShapeBtn onClick={() => addElement('stage')} label="Tarima" icon={<div className="w-6 h-3 bg-stone-800 rounded" />} />
             </div>
 
-            <div className="flex items-center gap-2 bg-stone-50 p-1.5 rounded-xl border border-stone-100 ml-3">
+            <div className="flex items-center gap-2 bg-stone-50 p-1.5 rounded-xl border border-stone-100 ml-3 shrink-0">
               <button onClick={() => setZoom(z => Math.max(0.2, z - 0.1))} className="p-2 hover:bg-white rounded-lg text-stone-400 transition-all hover:text-stone-800"><ZoomOut size={14} /></button>
               <span className="text-[10px] font-bold text-stone-800 w-10 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
               <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="p-2 hover:bg-white rounded-lg text-stone-400 transition-all hover:text-stone-800"><ZoomIn size={14} /></button>
-              <button onClick={() => setZoom(0.8)} className="p-2 hover:bg-white rounded-lg text-stone-400 transition-all hover:text-stone-800"><Maximize size={14} /></button>
+              <button onClick={() => setZoom(0.8)} className="p-2 hover:bg-white rounded-lg text-stone-400 transition-all hover:text-stone-800 hidden sm:block"><Maximize size={14} /></button>
             </div>
           </div>
 
           {/* Canvas Area - Protagonist Height */}
           <div 
             ref={containerRef}
-            className={`flex-1 overflow-auto relative rounded-[2.5rem] bg-stone-50/50 cursor-${tool === 'pan' ? 'grab' : 'default'} custom-scrollbar scroll-smooth shadow-inner`}
+            className={`flex-1 overflow-auto relative rounded-[1.5rem] md:rounded-[2.5rem] bg-stone-50/50 cursor-${tool === 'pan' ? 'grab' : 'default'} custom-scrollbar scroll-smooth shadow-inner`}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
@@ -475,7 +476,7 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
                           const m = metrics.allGuestMembers.find(gm => gm.id === mid);
                           return (
                             <div 
-                              key={idx} 
+                              key={`${selectedTable.id}-seat-${idx}`} 
                               onClick={() => {
                                 setActiveSeatIndex({ tableId: selectedTable.id, seatIndex: idx });
                                 setGuestSearch('');
@@ -534,72 +535,61 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
       </div>
 
       {/* Quick Seat Assignment Modal */}
-      {activeSeatIndex && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-stone-900/60 backdrop-blur-md animate-in fade-in duration-300">
-           <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-stone-200 animate-in zoom-in-95 duration-300">
-              <div className="p-8 border-b border-stone-100 bg-stone-50/50 flex items-center justify-between">
-                 <div>
-                    <h3 className="text-2xl font-bold text-stone-900 serif">Asignar Invitado</h3>
-                    <p className="text-[10px] text-stone-500 font-bold uppercase tracking-widest mt-1">
-                      Mesa: {selectedTable?.name} · Asiento {activeSeatIndex.seatIndex + 1}
-                    </p>
-                 </div>
-                 <button onClick={() => setActiveSeatIndex(null)} className="p-2.5 bg-white hover:bg-stone-100 text-stone-400 rounded-xl shadow-sm transition-all">
-                    <X size={18} />
-                 </button>
-              </div>
+      <Modal 
+        isOpen={!!activeSeatIndex} 
+        onClose={() => setActiveSeatIndex(null)}
+        title="Asignar Invitado"
+        subtitle={`Mesa: ${selectedTable?.name} · Asiento ${(activeSeatIndex?.seatIndex ?? 0) + 1}`}
+      >
+        <div className="space-y-5">
+           <div className="relative">
+              <input 
+                type="text" value={guestSearch} onChange={(e) => setGuestSearch(e.target.value)}
+                placeholder="Buscar por nombre..."
+                autoFocus
+                className="w-full pl-11 pr-4 py-3.5 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:border-[#C6A75E] focus:bg-white text-sm font-semibold text-stone-800 transition-all shadow-inner"
+              />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
+           </div>
 
-              <div className="p-8 space-y-5">
-                 <div className="relative">
-                    <input 
-                      type="text" value={guestSearch} onChange={(e) => setGuestSearch(e.target.value)}
-                      placeholder="Buscar por nombre..."
-                      autoFocus
-                      className="w-full pl-11 pr-4 py-3.5 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:border-[#C6A75E] focus:bg-white text-sm font-semibold text-stone-800 transition-all shadow-inner"
-                    />
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
-                 </div>
-
-                 <div className="max-h-[300px] overflow-y-auto pr-1 space-y-1.5 custom-scrollbar">
-                    {availableMembers.length > 0 ? (
-                      availableMembers.map(m => (
-                        <button 
-                          key={m.id} 
-                          onClick={() => assignMemberToSeat(activeSeatIndex.tableId, activeSeatIndex.seatIndex, m.id)}
-                          className="w-full flex items-center justify-between p-4 bg-white hover:bg-[#0F1A2E] hover:text-white border border-stone-100 rounded-2xl group transition-all shadow-sm hover:shadow-xl active:scale-95"
-                        >
-                           <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center text-stone-400 group-hover:bg-white/10 group-hover:text-white transition-colors">
-                                 <User size={14} />
-                              </div>
-                              <div className="text-left">
-                                 <p className="text-xs font-bold">{m.name}</p>
-                                 <p className="text-[9px] font-bold uppercase tracking-tighter opacity-50 group-hover:opacity-100">{m.ageCategory}</p>
-                              </div>
-                           </div>
-                           <Plus size={16} className="text-[#C6A75E] opacity-0 group-hover:opacity-100 transition-all" />
-                        </button>
-                      ))
-                    ) : (
-                      <div className="py-10 text-center bg-stone-50 rounded-2xl border border-dashed border-stone-200">
-                         <Search size={24} className="mx-auto text-stone-200 mb-2" />
-                         <p className="text-[10px] text-stone-400 italic serif">No hay invitados disponibles.</p>
-                      </div>
-                    )}
-                 </div>
-              </div>
-
-              <div className="p-6 bg-stone-50/50 border-t border-stone-100 text-center">
-                 <button 
-                  onClick={() => setActiveSeatIndex(null)}
-                  className="text-stone-400 font-bold text-[10px] uppercase tracking-widest hover:text-stone-800 transition-colors"
-                 >
-                   Cerrar ventana
-                 </button>
-              </div>
+           <div className="max-h-[300px] overflow-y-auto pr-1 space-y-1.5 custom-scrollbar">
+              {availableMembers.length > 0 ? (
+                availableMembers.map(m => (
+                  <button 
+                    key={m.id} 
+                    onClick={() => activeSeatIndex && assignMemberToSeat(activeSeatIndex.tableId, activeSeatIndex.seatIndex, m.id)}
+                    className="w-full flex items-center justify-between p-4 bg-white hover:bg-[#0F1A2E] hover:text-white border border-stone-100 rounded-2xl group transition-all shadow-sm hover:shadow-xl active:scale-95"
+                  >
+                     <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-stone-50 flex items-center justify-center text-stone-400 group-hover:bg-white/10 group-hover:text-white transition-colors">
+                           <User size={14} />
+                        </div>
+                        <div className="text-left">
+                           <p className="text-xs font-bold">{m.name}</p>
+                           <p className="text-[9px] font-bold uppercase tracking-tighter opacity-50 group-hover:opacity-100">{m.ageCategory}</p>
+                        </div>
+                     </div>
+                     <Plus size={16} className="text-[#C6A75E] opacity-0 group-hover:opacity-100 transition-all" />
+                  </button>
+                ))
+              ) : (
+                <div className="py-10 text-center bg-stone-50 rounded-2xl border border-dashed border-stone-200">
+                   <Search size={24} className="mx-auto text-stone-200 mb-2" />
+                   <p className="text-[10px] text-stone-400 italic serif">No hay invitados disponibles.</p>
+                </div>
+              )}
            </div>
         </div>
-      )}
+
+        <div className="pt-6 text-center">
+           <button 
+            onClick={() => setActiveSeatIndex(null)}
+            className="text-stone-400 font-bold text-[10px] uppercase tracking-widest hover:text-stone-800 transition-colors"
+           >
+             Cerrar ventana
+           </button>
+        </div>
+      </Modal>
 
       {/* Global Style Inject for Scrollbars */}
       <style dangerouslySetInnerHTML={{ __html: `

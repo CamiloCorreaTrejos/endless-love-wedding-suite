@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { COLORS } from '../constants';
 import { Heart, Lock, Mail, Sparkles, Calendar, AlertCircle } from 'lucide-react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../src/lib/supabaseClient';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -22,6 +22,7 @@ export const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    console.log("LOGIN_START");
 
     try {
       const { error: authError } = await supabase.auth.signInWithPassword({
@@ -33,13 +34,27 @@ export const Login: React.FC = () => {
         let message = authError.message;
         if (message === 'Invalid login credentials') message = 'Credenciales no válidas';
         setError(message);
-        setIsLoading(false);
+      } else {
+        console.log("LOGIN_OK");
+        const { data: sessionData } = await supabase.auth.getSession();
+        console.log("SESSION_AFTER_LOGIN", sessionData?.session);
+        console.log("USER_AFTER_LOGIN", sessionData?.session?.user);
+        
+        if (sessionData?.session) {
+          console.log("NAVIGATE_DASHBOARD");
+          // Nota: App.tsx reaccionará al cambio de estado de auth automáticamente
+        } else {
+          console.log("NO_SESSION_AFTER_LOGIN");
+          setError("Login OK pero sin sesión activa. Revisa configuración del Auth Provider.");
+        }
       }
       // Nota: onAuthStateChange en App.tsx manejará la redirección al detectar el login exitoso
     } catch (err) {
       console.error('Login Exception:', err);
       setError('Ocurrió un error inesperado al intentar acceder.');
+    } finally {
       setIsLoading(false);
+      console.log("LOGIN_FINALLY");
     }
   };
 
