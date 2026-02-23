@@ -5,8 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Endless Love Organizer</title>
     <script>
+      // Global Error Handlers for debugging
+      window.onerror = function(message, source, lineno, colno, error) {
+        console.error("GLOBAL_ERROR:", message, "at", source, ":", lineno);
+      };
+      window.onunhandledrejection = function(event) {
+        console.error("UNHANDLED_REJECTION:", event.reason);
+      };
+
+      // Workaround for "Cannot set property fetch of #<Window> which has only a getter"
+      // This happens when some libraries try to polyfill fetch in a restricted environment.
+      (function() {
+        console.log("[System] Initializing fetch workaround...");
+        try {
+          const nativeFetch = window.fetch;
+          
+          // Try to redefine the property to be writable
+          try {
+            Object.defineProperty(window, 'fetch', {
+              value: nativeFetch,
+              writable: true,
+              configurable: true,
+              enumerable: true
+            });
+            console.log("[System] fetch property redefined successfully.");
+          } catch (e) {
+            console.log("[System] defineProperty failed, trying setter workaround...");
+            // If we can't make it writable, try to at least add a no-op setter to prevent crashes
+            try {
+              Object.defineProperty(window, 'fetch', {
+                get: function() { return nativeFetch; },
+                set: function(v) { console.warn("[System] Blocked attempt to overwrite window.fetch"); },
+                configurable: true,
+                enumerable: true
+              });
+              console.log("[System] fetch setter workaround applied.");
+            } catch (e2) {
+              console.warn("[System] All fetch workarounds failed. Property is likely non-configurable.");
+            }
+          }
+        } catch (e) {
+          console.warn("[System] Fetch workaround critical failure:", e);
+        }
+      })();
+
       // Runtime Environment Variables Injection
-      // Valores se inyectan en producción via Netlify env / runtime injection
       window.__ENV__ = {
         VITE_SUPABASE_URL: "",
         VITE_SUPABASE_ANON_KEY: ""

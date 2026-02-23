@@ -5,10 +5,20 @@ import { createClient } from "@supabase/supabase-js";
  */
 
 const getEnv = (key: string) => {
+  // Check window.__ENV__ first (runtime injection)
   if (typeof window !== 'undefined' && (window as any).__ENV__ && (window as any).__ENV__[key]) {
     return (window as any).__ENV__[key];
   }
-  return (import.meta as any).env[key] || (typeof process !== 'undefined' ? process.env[key] : null) || null;
+  // Fallback to import.meta.env (build-time or .env file)
+  const metaVal = (import.meta as any).env[key];
+  if (metaVal) return metaVal;
+  
+  // Fallback to process.env
+  if (typeof process !== 'undefined' && process.env[key]) {
+    return process.env[key];
+  }
+  
+  return null;
 };
 
 const supabaseUrl = getEnv('VITE_SUPABASE_URL');

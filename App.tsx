@@ -226,39 +226,65 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const isResilientMode = userProfile?.wedding_id === '00000000-0000-0000-0000-000000000000';
+  const isConfigMissing = !userProfile?.wedding_id || userProfile.wedding_id === 'placeholder';
+
   if (authLoading) return <ElegantLoader />;
   if (!authUser) return <Login />;
 
   if (!userProfile) {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-white">
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-white p-6 text-center">
         <ElegantLoader />
         <p className="mt-4 text-stone-400 text-xs font-bold uppercase tracking-[0.3em] animate-pulse">
-          Cargando tu suite...
+          Sincronizando perfil...
         </p>
+        <div className="mt-12 pt-8 border-t border-stone-50">
+          <p className="text-[10px] text-stone-300 uppercase tracking-widest mb-4">¿Problemas de conexión?</p>
+          <button 
+            onClick={signOut}
+            className="px-6 py-2 border border-stone-200 rounded-full text-[10px] font-bold text-stone-400 uppercase tracking-widest hover:bg-stone-50 transition-all"
+          >
+            Cerrar Sesión y Reintentar
+          </button>
+        </div>
       </div>
     );
   }
 
-  if (!userProfile.wedding_id) {
+  if (isConfigMissing && !isResilientMode) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-stone-50 p-6 text-center">
         <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mb-6">
           <AlertCircle size={32} className="text-rose-500" />
         </div>
-        <h2 className="text-xl font-bold text-[#0F1A2E] serif mb-2">Configuración Incompleta</h2>
+        <h2 className="text-xl font-bold text-[#0F1A2E] serif mb-2">Configuración Requerida</h2>
         <p className="text-stone-500 text-sm max-w-md mb-8">
-          Tu perfil no tiene un wedding_id asignado.
+          No se ha detectado una base de datos configurada o tu perfil está incompleto.
         </p>
-        <button onClick={signOut} className="px-8 py-3 bg-[#0F1A2E] text-white rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-opacity-90 transition-all">
-          Cerrar Sesión
-        </button>
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          <button onClick={() => window.location.reload()} className="w-full py-3 bg-[#0F1A2E] text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-opacity-90 transition-all">
+            Recargar Aplicación
+          </button>
+          <button onClick={signOut} className="w-full py-3 border border-stone-200 text-stone-500 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-stone-100 transition-all">
+            Cerrar Sesión
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab} onLogout={signOut} data={weddingData}>
+      {isResilientMode && (
+        <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl mb-6 flex items-center justify-between gap-3 text-amber-700 text-[10px] font-bold uppercase tracking-widest animate-in slide-in-from-top-2">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+            <span>Modo Resiliente Activo: Los cambios no se guardarán permanentemente.</span>
+          </div>
+          <button onClick={() => window.location.reload()} className="underline decoration-amber-200 hover:decoration-amber-400">Reintentar Conexión</button>
+        </div>
+      )}
       {(dataError || actionError) && (
         <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl mb-6 flex items-center justify-center gap-3 text-rose-600 text-xs font-bold uppercase tracking-widest animate-in fade-in slide-in-from-top-2">
           <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />

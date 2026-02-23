@@ -280,7 +280,7 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
       </aside>
 
       {/* Contenido Principal */}
-      <main className="flex-1 overflow-y-auto relative flex flex-col bg-stone-50/50">
+      <main className={`flex-1 relative flex flex-col bg-stone-50/50 ${activeTab === 'seating' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         {/* Mobile Header */}
         <div className="md:hidden p-4 flex items-center justify-between border-b bg-white sticky top-0 z-30">
            <div className="flex items-center gap-2">
@@ -302,7 +302,7 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
            </div>
         </div>
 
-        <div className="max-w-7xl mx-auto p-4 md:p-12 w-full pb-32 md:pb-12">
+        <div className={`max-w-7xl mx-auto p-4 md:p-12 w-full ${activeTab === 'seating' ? 'flex-1 flex flex-col min-h-0 pb-4 md:pb-8' : 'pb-32 md:pb-12'}`}>
           {children}
         </div>
 

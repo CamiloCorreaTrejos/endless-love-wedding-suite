@@ -21,58 +21,91 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchOrCreateProfile = async (userId: string, email: string) => {
     try {
+      console.log('[Auth] Fetching profile for:', userId);
       let { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Profiles Fetch Error]:', error);
+        throw error;
+      }
 
       if (!profile) {
+        console.log('[Auth] Profile not found, creating...');
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
           .insert({ id: userId, email, role: 'admin', full_name: '' })
           .select()
           .single();
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('[Profiles Insert Error]:', insertError);
+          throw insertError;
+        }
         profile = newProfile;
       }
+      
+      console.log('[Auth] Profile synced:', profile?.id);
       setUserProfile(profile as UserProfile);
       return profile as UserProfile;
     } catch (err) {
-      console.error('[Profiles Sync Error]:', err);
-      return null;
+      console.error('[Profiles Sync Critical Error]:', err);
+      
+      // Resilient Fallback: If DB is unreachable or schema is missing, 
+      // provide a local "Demo" profile so the user can at least see the app.
+      const fallbackProfile: UserProfile = {
+        id: userId,
+        email: email,
+        role: 'admin',
+        full_name: 'Usuario (Modo Resiliente)',
+        wedding_id: '00000000-0000-0000-0000-000000000000' // Placeholder UUID
+      };
+      
+      console.warn('[Auth] Using fallback profile due to database error.');
+      setUserProfile(fallbackProfile);
+      return fallbackProfile;
     }
   };
 
   useEffect(() => {
     const initSession = async () => {
-      setLoading(true);
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      if (initialSession?.user) {
-        setAuthUser(initialSession.user);
-        await fetchOrCreateProfile(initialSession.user.id, initialSession.user.email || '');
+      try {
+        setLoading(true);
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        setSession(initialSession);
+        if (initialSession?.user) {
+          setAuthUser(initialSession.user);
+          await fetchOrCreateProfile(initialSession.user.id, initialSession.user.email || '');
+        }
+      } catch (err) {
+        console.error('[Auth Init Error]:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       console.log("AUTH_STATE_CHANGE", event, !!currentSession);
-      setSession(currentSession);
-      if (currentSession?.user) {
-        setAuthUser(currentSession.user);
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          await fetchOrCreateProfile(currentSession.user.id, currentSession.user.email || '');
+      try {
+        setSession(currentSession);
+        if (currentSession?.user) {
+          setAuthUser(currentSession.user);
+          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+            await fetchOrCreateProfile(currentSession.user.id, currentSession.user.email || '');
+          }
+        } else {
+          setAuthUser(null);
+          setUserProfile(null);
         }
-      } else {
-        setAuthUser(null);
-        setUserProfile(null);
+      } catch (err) {
+        console.error('[Auth State Change Error]:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
