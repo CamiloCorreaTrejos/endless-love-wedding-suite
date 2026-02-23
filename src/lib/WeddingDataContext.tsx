@@ -7,6 +7,7 @@ import {
   getVendorsByWedding, 
   getBudgetByWedding, 
   getTasksByWedding,
+  getWeddingById,
   supabase
 } from '../../services/supabase';
 
@@ -41,7 +42,8 @@ export const WeddingDataProvider: React.FC<{ children: React.ReactNode, weddingI
     setError(null);
     console.log("WEDDING_DATA_REFRESH_START", { weddingId: id });
     try {
-      const [guestsRes, tablesRes, vendorsRes, budgetRes, tasksRes] = await Promise.all([
+      const [weddingRes, guestsRes, tablesRes, vendorsRes, budgetRes, tasksRes] = await Promise.all([
+        getWeddingById(id),
         getGuestsByWedding(id),
         getTablesByWedding(id),
         getVendorsByWedding(id),
@@ -49,8 +51,15 @@ export const WeddingDataProvider: React.FC<{ children: React.ReactNode, weddingI
         getTasksByWedding(id)
       ]);
 
+      const wedding = weddingRes.data;
+
       setWeddingData(prev => ({
         ...prev,
+        partner1: wedding?.partner1_name || prev.partner1,
+        partner2: wedding?.partner2_name || prev.partner2,
+        date: wedding?.wedding_date || prev.date,
+        budget: wedding?.total_budget || prev.budget,
+        coverImageUrl: wedding?.cover_image_url || null,
         guests: guestsRes.data || [],
         tables: tablesRes.data || [],
         vendors: vendorsRes.data || [],

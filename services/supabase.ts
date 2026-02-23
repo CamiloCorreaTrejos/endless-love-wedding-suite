@@ -37,7 +37,7 @@ export const mapTableRowToUI = (row: any): Table => ({
   width: row.width ?? 100,
   height: row.height ?? 100,
   rotation: row.rotation ?? 0,
-  assignedGuestIds: row.assigned_guest_ids ?? [],
+  assignedGuestIds: [], // Will be populated by getTablesByWedding
 });
 
 export const mapVendorRowToUI = (row: any): Vendor => ({
@@ -118,7 +118,6 @@ export const mapTableUIToInsertPayload = (table: Omit<Table, 'id'>, weddingId: s
   width: table.width,
   height: table.height,
   rotation: table.rotation,
-  assigned_guest_ids: table.assignedGuestIds,
 });
 
 export const mapTableUIToUpdatePatch = (updates: Partial<Table>) => {
@@ -131,7 +130,6 @@ export const mapTableUIToUpdatePatch = (updates: Partial<Table>) => {
   if (updates.width !== undefined) patch.width = updates.width;
   if (updates.height !== undefined) patch.height = updates.height;
   if (updates.rotation !== undefined) patch.rotation = updates.rotation;
-  if (updates.assignedGuestIds !== undefined) patch.assigned_guest_ids = updates.assignedGuestIds;
   return patch;
 };
 
@@ -365,12 +363,51 @@ export const getTablesByWedding = async (weddingId: string) => {
   checkSupabase();
   checkWeddingId(weddingId);
   console.log("GET_TABLES_START", { weddingId });
-  const { data, error } = await supabase!.from('tables').select('*').eq('wedding_id', weddingId);
-  if (error) {
-    console.error("GET_TABLES_ERROR", error);
-    return { data: [], error };
+  
+  // 1. Fetch tables
+  const { data: tablesData, error: tablesError } = await supabase!
+    .from('tables')
+    .select('id, name, type, seats, x_position, y_position, width, height, rotation')
+    .eq('wedding_id', weddingId);
+    
+  if (tablesError) {
+    console.error("GET_TABLES_ERROR", tablesError);
+    return { data: [], error: tablesError };
   }
-  const mapped = data.map(mapTableRowToUI);
+
+  if (!tablesData || tablesData.length === 0) {
+    return { data: [], error: null };
+  }
+
+  const tableIds = tablesData.map(t => t.id);
+
+  // 2. Fetch assignments from guest_members
+  const { data: membersData, error: membersError } = await supabase!
+    .from('guest_members')
+    .select('id, table_id')
+    .in('table_id', tableIds);
+
+  if (membersError) {
+    console.error("GET_TABLE_ASSIGNMENTS_ERROR", membersError);
+    // Continue with empty assignments if this fails
+  }
+
+  // 3. Build map of table_id -> [member_id]
+  const assignmentMap: Record<string, string[]> = {};
+  (membersData || []).forEach(m => {
+    if (m.table_id) {
+      if (!assignmentMap[m.table_id]) assignmentMap[m.table_id] = [];
+      assignmentMap[m.table_id].push(m.id);
+    }
+  });
+
+  // 4. Map to UI model
+  const mapped = tablesData.map(row => {
+    const table = mapTableRowToUI(row);
+    table.assignedGuestIds = assignmentMap[table.id] || [];
+    return table;
+  });
+
   console.log("GET_TABLES_OK", { count: mapped.length });
   return { data: mapped, error: null };
 };
@@ -394,6 +431,19 @@ export const updateTable = async (tableId: string, updates: Partial<Table>, wedd
   const { error } = await supabase!.from('tables').update(patch).eq('id', tableId).eq('wedding_id', weddingId);
   if (error) console.error("UPDATE_TABLE_ERROR", error);
   else console.log("UPDATE_TABLE_OK");
+  return { error };
+};
+
+export const assignGuestMemberToTable = async (memberId: string, tableId: string | null) => {
+  checkSupabase();
+  console.log("ASSIGN_MEMBER_TO_TABLE_START", { memberId, tableId });
+  const { error } = await supabase!
+    .from('guest_members')
+    .update({ table_id: tableId })
+    .eq('id', memberId);
+    
+  if (error) console.error("ASSIGN_MEMBER_TO_TABLE_ERROR", error);
+  else console.log("ASSIGN_MEMBER_TO_TABLE_OK");
   return { error };
 };
 
@@ -660,6 +710,30 @@ export const updateTask = async (taskId: string, updates: Partial<Task>, wedding
 };
 
 // WEDDINGS
+export const getWeddingById = async (weddingId: string) => {
+  checkSupabase();
+  checkWeddingId(weddingId);
+  console.log("GET_WEDDING_START", { weddingId });
+  try {
+    const { data, error } = await supabase!
+      .from('weddings')
+      .select('id, partner1_name, partner2_name, wedding_date, total_budget, cover_image_url')
+      .eq('id', weddingId)
+      .single();
+    
+    if (error) throw error;
+    
+    console.log("GET_WEDDING_OK", { 
+      id: data.id, 
+      hasCover: !!data.cover_image_url 
+    });
+    return { data, error: null };
+  } catch (error: any) {
+    console.error("GET_WEDDING_ERROR", error);
+    return { data: null, error };
+  }
+};
+
 export const updateWedding = async (weddingId: string, updates: any) => {
   checkSupabase();
   checkWeddingId(weddingId);

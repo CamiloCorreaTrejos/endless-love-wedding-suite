@@ -29,7 +29,7 @@ export interface Table {
   width: number;
   height: number;
   rotation: number;
-  assignedGuestIds: string[];
+  assignedGuestIds?: string[];
 }
 
 export interface BudgetItem {
@@ -81,6 +81,7 @@ export interface WeddingData {
   partner2: string;
   date: string;
   budget: number;
+  coverImageUrl?: string | null;
   guests: Guest[];
   expenses: BudgetItem[];
   tasks: Task[];

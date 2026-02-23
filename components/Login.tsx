@@ -3,20 +3,26 @@ import React, { useState, useEffect } from 'react';
 import { COLORS } from '../constants';
 import { Heart, Lock, Mail, Sparkles, Calendar, AlertCircle } from 'lucide-react';
 import { supabase } from '../src/lib/supabaseClient';
+import { useWeddingData } from '../src/lib/WeddingDataContext';
 
 export const Login: React.FC = () => {
+  const { weddingData } = useWeddingData();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [daysLeft, setDaysLeft] = useState(0);
 
+ // const FALLBACK_URL = "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=2069&auto=format&fit=crop";
+
+  const FALLBACK_URL = "https://odluvqpfwypkufkugoep.supabase.co/storage/v1/object/public/wedding-covers/ChatGPT%20Image%2023%20feb%202026,%2002_19_05%20p.m..png";
+
   useEffect(() => {
-    const target = new Date('2027-08-21T00:00:00');
+    const target = new Date(weddingData.date + 'T00:00:00');
     const now = new Date();
     const diff = target.getTime() - now.getTime();
     setDaysLeft(Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24))));
-  }, []);
+  }, [weddingData.date]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,9 +70,12 @@ export const Login: React.FC = () => {
       {/* Columna Izquierda: Fotografía Cinematográfica */}
       <div className="w-full md:w-1/2 h-[45vh] md:h-full relative overflow-hidden shrink-0">
         <img 
-          src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=2069&auto=format&fit=crop" 
-          alt="Camilo & Valentina Wedding" 
+          src={weddingData.coverImageUrl || FALLBACK_URL} 
+          alt={`${weddingData.partner1} & ${weddingData.partner2} Wedding`} 
           className="w-full h-full object-cover transition-transform duration-[15s] hover:scale-105 ease-out"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = FALLBACK_URL;
+          }}
         />
         <div className="absolute inset-0 bg-[#0F1A2E]/5" />
         
@@ -91,7 +100,9 @@ export const Login: React.FC = () => {
             <div className="relative group">
               <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg border border-stone-50 transition-transform duration-500 group-hover:scale-105">
                 <div className="w-16 h-16 rounded-full border border-dashed border-[#C6A75E]/30 flex items-center justify-center flex-col">
-                  <span className="text-xl font-bold text-[#0F1A2E] serif leading-none">C & V</span>
+                  <span className="text-xl font-bold text-[#0F1A2E] serif leading-none">
+                    {weddingData.partner1[0]} & {weddingData.partner2[0]}
+                  </span>
                   <Heart size={8} className="text-[#C6A75E] fill-[#C6A75E] mt-1" />
                 </div>
               </div>
@@ -99,7 +110,9 @@ export const Login: React.FC = () => {
 
             <div className="text-center space-y-6">
               <div className="space-y-2">
-                <h2 className="text-4xl font-bold text-[#0F1A2E] serif tracking-tight">Camilo & Valentina</h2>
+                <h2 className="text-4xl font-bold text-[#0F1A2E] serif tracking-tight">
+                  {weddingData.partner1} & {weddingData.partner2}
+                </h2>
                 <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#C6A75E]">Nuestro Gran Día</p>
               </div>
               
@@ -181,7 +194,7 @@ export const Login: React.FC = () => {
               <p className="text-[8px] uppercase tracking-[0.4em] font-bold text-stone-400">“Cada detalle cuenta.”</p>
               <div className="flex flex-col items-center gap-1">
                 <p className="text-[8px] text-stone-300 font-medium">
-                  &copy; 2027 Camilo & Valentina Wedding
+                  &copy; {new Date(weddingData.date).getFullYear()} {weddingData.partner1} & {weddingData.partner2} Wedding
                 </p>
                 <div className="w-1 h-1 rounded-full bg-[#C6A75E] opacity-40" />
               </div>

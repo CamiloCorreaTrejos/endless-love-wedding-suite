@@ -13,14 +13,18 @@ import {
 interface SeatingPlannerProps {
   tables: Table[];
   guests: Guest[];
-  onUpdateTables: (tables: Table[]) => void;
+  onAddTable: (table: Omit<Table, 'id'>) => void;
+  onUpdateTable: (id: string, updates: Partial<Table>) => void;
+  onRemoveTable: (id: string) => void;
+  onAssignGuest: (memberId: string, tableId: string | null) => void;
 }
 
 const SNAP_SIZE = 10;
 const CANVAS_WIDTH = 3000;
 const CANVAS_HEIGHT = 2000;
 
-export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, onUpdateTables }) => {
+export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, onAddTable, onUpdateTable, onRemoveTable, onAssignGuest }) => {
+  const [localTables, setLocalTables] = useState<Table[]>(tables);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [activeSeatIndex, setActiveSeatIndex] = useState<{ tableId: string, seatIndex: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -33,25 +37,32 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
   const containerRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
 
+  // Sync local tables when props change, but only if not dragging
+  useEffect(() => {
+    if (!isDragging) {
+      setLocalTables(tables);
+    }
+  }, [tables, isDragging]);
+
   // Strategic Metrics
   const metrics = useMemo(() => {
-    const totalTables = tables.filter(t => !['stage', 'dancefloor', 'cake'].includes(t.type)).length;
-    const totalCapacity = tables.reduce((acc, t) => acc + (['stage', 'dancefloor', 'cake'].includes(t.type) ? 0 : t.seats), 0);
+    const totalTables = localTables.filter(t => !['stage', 'dancefloor', 'cake'].includes(t.type)).length;
+    const totalCapacity = localTables.reduce((acc, t) => acc + (['stage', 'dancefloor', 'cake'].includes(t.type) ? 0 : t.seats), 0);
     const allGuestMembers = guests.flatMap(g => g.members);
-    const assignedIds = new Set(tables.flatMap(t => t.assignedGuestIds).filter(id => id && id !== ''));
+    const assignedIds = new Set(localTables.flatMap(t => t.assignedGuestIds).filter(id => id && id !== ''));
     const assignedCount = assignedIds.size;
     const unassignedCount = allGuestMembers.length - assignedCount;
 
     return { totalTables, totalCapacity, assignedCount, unassignedCount, allGuestMembers };
-  }, [tables, guests]);
+  }, [localTables, guests]);
 
-  const selectedTable = useMemo(() => tables.find(t => t.id === selectedTableId), [tables, selectedTableId]);
+  const selectedTable = useMemo(() => localTables.find(t => t.id === selectedTableId), [localTables, selectedTableId]);
 
   const availableMembers = useMemo(() => 
     metrics.allGuestMembers.filter(m => 
-      !tables.some(t => t.assignedGuestIds.includes(m.id)) &&
+      !localTables.some(t => t.assignedGuestIds.includes(m.id)) &&
       m.name.toLowerCase().includes(guestSearch.toLowerCase())
-    ), [metrics.allGuestMembers, tables, guestSearch]);
+    ), [metrics.allGuestMembers, localTables, guestSearch]);
 
   const handleMouseDownTable = (e: React.MouseEvent, tableId: string) => {
     if (tool !== 'select') return;
@@ -100,11 +111,17 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
       x = Math.round(x / SNAP_SIZE) * SNAP_SIZE;
       y = Math.round(y / SNAP_SIZE) * SNAP_SIZE;
       
-      onUpdateTables(tables.map(t => t.id === draggedTableId ? { ...t, x, y } : t));
+      setLocalTables(prev => prev.map(t => t.id === draggedTableId ? { ...t, x, y } : t));
     }
   };
 
   const handleMouseUp = () => {
+    if (isDragging && draggedTableId && tool === 'select') {
+      const table = localTables.find(t => t.id === draggedTableId);
+      if (table) {
+        onUpdateTable(draggedTableId, { x: table.x, y: table.y });
+      }
+    }
     setIsDragging(false);
     setDraggedTableId(null);
   };
@@ -114,9 +131,8 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
     const baseSize = isObject ? (type === 'cake' ? 80 : 200) : 140;
     const seatsCount = isObject ? 0 : 8;
     
-    const newTable: Table = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: isObject ? (type === 'cake' ? 'Pastel' : type === 'stage' ? 'Tarima' : 'Pista') : `Mesa ${tables.filter(t => !['cake', 'stage', 'dancefloor'].includes(t.type)).length + 1}`,
+    const newTable: Omit<Table, 'id'> = {
+      name: isObject ? (type === 'cake' ? 'Pastel' : type === 'stage' ? 'Tarima' : 'Pista') : `Mesa ${localTables.filter(t => !['cake', 'stage', 'dancefloor'].includes(t.type)).length + 1}`,
       type,
       seats: seatsCount,
       x: 200 + (containerRef.current?.scrollLeft || 0) / zoom,
@@ -126,50 +142,39 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
       rotation: 0,
       assignedGuestIds: Array(seatsCount).fill('')
     };
-    onUpdateTables([...tables, newTable]);
-    setSelectedTableId(newTable.id);
+    onAddTable(newTable);
   };
 
   const duplicateTable = () => {
     if (!selectedTable) return;
-    const newTable: Table = {
+    const newTable: Omit<Table, 'id'> = {
       ...selectedTable,
-      id: Math.random().toString(36).substr(2, 9),
       x: selectedTable.x + 40,
       y: selectedTable.y + 40,
       name: `${selectedTable.name} (Copia)`
     };
-    onUpdateTables([...tables, newTable]);
-    setSelectedTableId(newTable.id);
+    onAddTable(newTable);
   };
 
   const updateSelectedTable = (updates: Partial<Table>) => {
     if (!selectedTableId) return;
-    onUpdateTables(tables.map(t => t.id === selectedTableId ? { ...t, ...updates } : t));
+    setLocalTables(prev => prev.map(t => t.id === selectedTableId ? { ...t, ...updates } : t));
+    onUpdateTable(selectedTableId, updates);
   };
 
   const assignMemberToSeat = (tableId: string, seatIndex: number, memberId: string) => {
-    onUpdateTables(tables.map(t => {
-      if (t.id === tableId) {
-        const newIds = [...t.assignedGuestIds];
-        while (newIds.length < t.seats) newIds.push('');
-        newIds[seatIndex] = memberId;
-        return { ...t, assignedGuestIds: newIds };
-      }
-      return t;
-    }));
+    onAssignGuest(memberId, tableId);
     setActiveSeatIndex(null);
   };
 
   const unassignFromSeat = (tableId: string, seatIndex: number) => {
-    onUpdateTables(tables.map(t => {
-      if (t.id === tableId) {
-        const newIds = [...t.assignedGuestIds];
-        newIds[seatIndex] = '';
-        return { ...t, assignedGuestIds: newIds };
-      }
-      return t;
-    }));
+    const table = localTables.find(t => t.id === tableId);
+    if (!table) return;
+
+    const memberId = table.assignedGuestIds?.[seatIndex];
+    if (memberId) {
+      onAssignGuest(memberId, null);
+    }
   };
 
   const renderChairs = (table: Table) => {
@@ -199,7 +204,7 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
         cy = py;
       }
 
-      const assignedGuestId = table.assignedGuestIds[i];
+      const assignedGuestId = table.assignedGuestIds?.[i];
       const member = assignedGuestId ? metrics.allGuestMembers.find(m => m.id === assignedGuestId) : null;
       const isBeingEdited = activeSeatIndex?.tableId === table.id && activeSeatIndex?.seatIndex === i;
 
@@ -231,7 +236,7 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
 
   const getTableStatusColor = (table: Table) => {
     if (['stage', 'dancefloor', 'cake'].includes(table.type)) return '';
-    const occupied = table.assignedGuestIds.filter(id => id && id !== '').length;
+    const occupied = (table.assignedGuestIds || []).filter(id => id && id !== '').length;
     if (occupied > table.seats) return 'border-rose-500 bg-rose-50/20';
     if (occupied === table.seats) return 'border-emerald-500 bg-emerald-50/20';
     if (occupied > 0) return 'border-amber-400 bg-amber-50/20';
@@ -311,7 +316,7 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
               {/* This inner div handles pointer events for the board when panning is active */}
               {tool === 'pan' && <div className="absolute inset-0 z-50 cursor-grab active:cursor-grabbing" style={{ pointerEvents: 'auto' }} />}
               
-              {tables.map(table => {
+              {localTables.map(table => {
                 const isSelected = selectedTableId === table.id;
                 const statusColor = getTableStatusColor(table);
                 const isObject = ['cake', 'stage', 'dancefloor'].includes(table.type);
@@ -365,7 +370,7 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
                         </span>
                         {!isObject && (
                           <span className={`text-[9px] font-bold mt-1.5 px-2 py-0.5 rounded-full ${table.type === 'cake' ? 'text-white/60 bg-white/10' : 'text-[#C6A75E] bg-[#C6A75E]/5'}`}>
-                            {table.assignedGuestIds.filter(id => id && id !== '').length} / {table.seats}
+                            {(table.assignedGuestIds || []).filter(id => id && id !== '').length} / {table.seats}
                           </span>
                         )}
                       </div>
@@ -431,7 +436,7 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
                   <button onClick={duplicateTable} title="Duplicar" className="p-1.5 text-stone-400 hover:text-[#0F1A2E] hover:bg-stone-50 rounded-lg transition-all shadow-sm">
                     <Copy size={14} />
                   </button>
-                  <button onClick={() => { onUpdateTables(tables.filter(t => t.id !== selectedTableId)); setSelectedTableId(null); }} title="Eliminar" className="p-1.5 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all shadow-sm">
+                  <button onClick={() => { onRemoveTable(selectedTableId!); setSelectedTableId(null); }} title="Eliminar" className="p-1.5 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all shadow-sm">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -469,14 +474,15 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
                   <section className="space-y-4 pt-6 border-t border-stone-50">
                     <div className="flex items-center justify-between">
                       <h4 className="text-[9px] font-bold text-stone-900 uppercase tracking-widest">Estado</h4>
-                      <span className="text-[9px] font-bold text-[#C6A75E]">{selectedTable.assignedGuestIds.filter(id => id && id !== '').length} / {selectedTable.seats}</span>
+                      <span className="text-[9px] font-bold text-[#C6A75E]">{(selectedTable.assignedGuestIds || []).filter(id => id && id !== '').length} / {selectedTable.seats}</span>
                     </div>
 
                     <div className="space-y-2">
                       <p className="text-[8px] font-bold text-stone-400 uppercase tracking-widest ml-1">Asientos</p>
                       <div className="grid grid-cols-1 gap-1">
-                        {selectedTable.assignedGuestIds.map((mid, idx) => {
-                          const m = metrics.allGuestMembers.find(gm => gm.id === mid);
+                        {Array.from({ length: selectedTable.seats }).map((_, idx) => {
+                          const mid = selectedTable.assignedGuestIds?.[idx];
+                          const m = mid ? metrics.allGuestMembers.find(gm => gm.id === mid) : null;
                           return (
                             <div 
                               key={`${selectedTable.id}-seat-${idx}`} 

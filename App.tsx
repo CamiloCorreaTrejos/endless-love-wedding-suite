@@ -18,6 +18,7 @@ import {
   createTable,
   updateTable,
   deleteTable,
+  assignGuestMemberToTable,
   createVendor,
   updateVendor,
   deleteVendor,
@@ -131,12 +132,59 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const handleAddTable = async (table: Omit<Table, 'id'>) => {
+    if (!weddingId) return;
+    try {
+      const { error } = await createTable(table, weddingId);
+      if (error) throw error;
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("CREATE_TABLE_ERROR", error);
+      setActionError("No se pudo crear la mesa.");
+    }
+  };
+
+  const handleUpdateTable = async (id: string, updates: Partial<Table>) => {
+    if (!weddingId) return;
+    try {
+      const { error } = await updateTable(id, updates, weddingId);
+      if (error) throw error;
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("UPDATE_TABLE_ERROR", error);
+    }
+  };
+
+  const handleRemoveTable = async (id: string) => {
+    if (!weddingId) return;
+    try {
+      const { error } = await deleteTable(id, weddingId);
+      if (error) throw error;
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("DELETE_TABLE_ERROR", error);
+    }
+  };
+
+  const handleAssignGuestToTable = async (memberId: string, tableId: string | null) => {
+    if (!weddingId) return;
+    try {
+      const { error } = await assignGuestMemberToTable(memberId, tableId);
+      if (error) throw error;
+      await refetchAll(weddingId);
+    } catch (error) {
+      console.error("ASSIGN_GUEST_TO_TABLE_ERROR", error);
+      setActionError("No se pudo asignar el invitado.");
+    }
+  };
+
   const handleUpdateTables = async (tables: Table[]) => {
     if (!weddingId) return;
     try {
+      // This is used for bulk updates like dragging or reordering if needed
+      // But we should prefer single updates for better performance and reliability
       for (const table of tables) {
-        const { error } = await updateTable(table.id, table, weddingId);
-        if (error) throw error;
+        await updateTable(table.id, table, weddingId);
       }
       await refetchAll(weddingId);
     } catch (error) {
@@ -218,7 +266,7 @@ const AppContent: React.FC = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard data={weddingData} />;
       case 'guests': return <GuestList guests={weddingData.guests} tables={weddingData.tables} onAddGuest={handleAddGuest} onRemoveGuest={handleRemoveGuest} onUpdateGuest={handleUpdateGuest} />;
-      case 'seating': return <SeatingPlanner tables={weddingData.tables} guests={weddingData.guests} onUpdateTables={handleUpdateTables} />;
+      case 'seating': return <SeatingPlanner tables={weddingData.tables} guests={weddingData.guests} onUpdateTable={handleUpdateTable} onAddTable={handleAddTable} onRemoveTable={handleRemoveTable} onAssignGuest={handleAssignGuestToTable} />;
       case 'vendors': return <VendorManager vendors={weddingData.vendors} onAddVendor={handleAddVendor} onUpdateVendor={handleUpdateVendor} onRemoveVendor={handleRemoveVendor} />;
       case 'budget': return <BudgetTracker expenses={weddingData.expenses} totalBudget={weddingData.budget} onAddExpense={handleAddExpense} onUpdateBudget={handleUpdateBudget} onRemoveExpense={handleRemoveExpense} />;
       case 'tasks': return <TaskList tasks={weddingData.tasks} onToggleTask={handleToggleTask} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onRemoveTask={handleRemoveTask} />;
