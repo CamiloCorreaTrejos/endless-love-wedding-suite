@@ -70,19 +70,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    let mounted = true;
+
     const initSession = async () => {
       try {
         setLoading(true);
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        setSession(initialSession);
-        if (initialSession?.user) {
-          setAuthUser(initialSession.user);
-          await fetchOrCreateProfile(initialSession.user.id, initialSession.user.email || '');
+        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) throw sessionError;
+
+        if (mounted) {
+          setSession(initialSession);
+          if (initialSession?.user) {
+            setAuthUser(initialSession.user);
+            await fetchOrCreateProfile(initialSession.user.id, initialSession.user.email || '');
+          } else {
+            setAuthUser(null);
+            setUserProfile(null);
+          }
         }
       } catch (err) {
         console.error('[Auth Init Error]:', err);
+        if (mounted) {
+          setAuthUser(null);
+          setUserProfile(null);
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -90,25 +106,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       console.log("AUTH_STATE_CHANGE", event, !!currentSession);
+      
+      if (!mounted) return;
+
       try {
         setSession(currentSession);
+        
         if (currentSession?.user) {
           setAuthUser(currentSession.user);
-          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          
+          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
             await fetchOrCreateProfile(currentSession.user.id, currentSession.user.email || '');
           }
         } else {
           setAuthUser(null);
           setUserProfile(null);
+          if (event === 'SIGNED_OUT') {
+            setLoading(false);
+          }
         }
       } catch (err) {
         console.error('[Auth State Change Error]:', err);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {

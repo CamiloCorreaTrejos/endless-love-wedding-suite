@@ -15,7 +15,7 @@ export const Login: React.FC = () => {
 
  // const FALLBACK_URL = "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=2069&auto=format&fit=crop";
 
-  const FALLBACK_URL = "https://odluvqpfwypkufkugoep.supabase.co/storage/v1/object/public/wedding-covers/ChatGPT%20Image%2023%20feb%202026,%2002_19_05%20p.m..png";
+  const FALLBACK_URL = "https://odluvqpfwypkufkugoep.supabase.co/storage/v1/object/public/wedding-covers/ChatGPT%20Image%2023%20feb%202026,%2003_04_16%20p.m..png";
 
   useEffect(() => {
     const target = new Date(weddingData.date + 'T00:00:00');
