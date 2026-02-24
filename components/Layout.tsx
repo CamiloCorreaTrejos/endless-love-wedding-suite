@@ -98,6 +98,12 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
       badge: sidebarMetrics.unseatedCount > 0 ? { type: 'count', value: sidebarMetrics.unseatedCount, color: 'bg-amber-400' } : null
     },
     { 
+      id: 'rsvp', 
+      label: 'Confirmaciones', 
+      icon: ICONS.RSVP,
+      badge: null 
+    },
+    { 
       id: 'vendors', 
       label: 'Proveedores', 
       icon: ICONS.Vendors,

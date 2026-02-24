@@ -5,6 +5,9 @@ export interface GuestMember {
   ageCategory: 'Adulto' | 'Niño';
   isUnknown?: boolean;
   tableId?: string;
+  attending?: boolean;
+  dietaryRestrictions?: string;
+  rsvpNotes?: string;
 }
 
 export interface Guest {
@@ -17,6 +20,11 @@ export interface Guest {
   certainty: 'Seguro' | 'Tal vez';
   dietary?: string;
   tableId?: string;
+  maxGuests: number;
+  rsvpCode: string;
+  rsvpStatus: 'pendiente' | 'parcial' | 'confirmado' | 'rechazado' | 'cerrado';
+  rsvpSubmittedAt?: string;
+  rsvpClosed: boolean;
 }
 
 export interface Table {

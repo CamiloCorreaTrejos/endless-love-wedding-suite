@@ -88,7 +88,11 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
       members: finalMembers,
       certainty,
       status,
-      confirmation
+      confirmation,
+      maxGuests: finalMembers.length,
+      rsvpCode: '',
+      rsvpStatus: 'pendiente',
+      rsvpClosed: false
     };
 
     if (editingGuestId) {

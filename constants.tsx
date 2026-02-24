@@ -64,7 +64,8 @@ export const ICONS = {
   Contract: <FileText size={16} />,
   Phone: <Phone size={14} />,
   Mail: <Mail size={14} />,
-  Alert: <AlertCircle size={14} />
+  Alert: <AlertCircle size={14} />,
+  RSVP: <CheckCircle2 size={20} />
 };
 
 export const INITIAL_TASKS = [

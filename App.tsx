@@ -7,6 +7,8 @@ import { BudgetTracker } from './components/BudgetTracker';
 import { TaskList } from './components/TaskList';
 import { SeatingPlanner } from './components/SeatingPlanner';
 import { VendorManager } from './components/VendorManager';
+import { RsvpManager } from './components/RsvpManager';
+import { PublicRsvp } from './components/PublicRsvp';
 import { Login } from './components/Login';
 import { ElegantLoader } from './components/ElegantLoader';
 import { AlertCircle } from 'lucide-react';
@@ -34,10 +36,19 @@ import { AuthProvider, useAuth } from './src/lib/AuthContext';
 import { WeddingDataProvider, useWeddingData } from './src/lib/WeddingDataContext';
 
 const AppContent: React.FC = () => {
-  const { authUser, userProfile, loading: authLoading, signOut } = useAuth();
+  const { authUser, userProfile, loading: authLoading, authError, signOut, retryBootstrap } = useAuth();
   const { weddingData, loading: dataLoading, error: dataError, refetchAll, setWeddingData } = useWeddingData();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // --- RSVP Route Detection ---
+  const path = window.location.pathname;
+  const isRsvpRoute = path.startsWith('/rsvp/');
+  const rsvpCode = isRsvpRoute ? path.split('/rsvp/')[1] : null;
+
+  if (isRsvpRoute && rsvpCode) {
+    return <PublicRsvp code={rsvpCode} />;
+  }
 
   const weddingId = userProfile?.wedding_id;
 
@@ -267,6 +278,7 @@ const AppContent: React.FC = () => {
       case 'dashboard': return <Dashboard data={weddingData} />;
       case 'guests': return <GuestList guests={weddingData.guests} tables={weddingData.tables} onAddGuest={handleAddGuest} onRemoveGuest={handleRemoveGuest} onUpdateGuest={handleUpdateGuest} />;
       case 'seating': return <SeatingPlanner tables={weddingData.tables} guests={weddingData.guests} onUpdateTable={handleUpdateTable} onAddTable={handleAddTable} onRemoveTable={handleRemoveTable} onAssignGuest={handleAssignGuestToTable} />;
+      case 'rsvp': return <RsvpManager weddingId={weddingId} />;
       case 'vendors': return <VendorManager vendors={weddingData.vendors} onAddVendor={handleAddVendor} onUpdateVendor={handleUpdateVendor} onRemoveVendor={handleRemoveVendor} />;
       case 'budget': return <BudgetTracker expenses={weddingData.expenses} totalBudget={weddingData.budget} onAddExpense={handleAddExpense} onUpdateBudget={handleUpdateBudget} onRemoveExpense={handleRemoveExpense} />;
       case 'tasks': return <TaskList tasks={weddingData.tasks} onToggleTask={handleToggleTask} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onRemoveTask={handleRemoveTask} />;
@@ -278,6 +290,27 @@ const AppContent: React.FC = () => {
   const isConfigMissing = !userProfile?.wedding_id || userProfile.wedding_id === 'placeholder';
 
   if (authLoading) return <ElegantLoader />;
+
+  if (authError) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-stone-50 p-6 text-center">
+        <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mb-6">
+          <AlertCircle size={32} className="text-rose-500" />
+        </div>
+        <h2 className="text-xl font-bold text-[#0F1A2E] serif mb-2">Error de Sesión</h2>
+        <p className="text-stone-500 text-sm max-w-md mb-8">{authError}</p>
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          <button onClick={retryBootstrap} className="w-full py-3 bg-[#0F1A2E] text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-opacity-90 transition-all">
+            Reintentar
+          </button>
+          <button onClick={signOut} className="w-full py-3 border border-stone-200 text-stone-500 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-stone-100 transition-all">
+            Cerrar Sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!authUser) return <Login />;
 
   if (!userProfile) {

@@ -36,7 +36,8 @@ export const supabase = createClient(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storage: window.localStorage
+      storage: window.localStorage,
+      storageKey: 'endless-love-auth'
     }
   }
 );

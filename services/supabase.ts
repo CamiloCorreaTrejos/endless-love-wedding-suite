@@ -14,6 +14,9 @@ export const mapGuestMemberRowToUI = (row: any): GuestMember => ({
   ageCategory: row.age_category ?? 'Adulto',
   isUnknown: row.is_unknown ?? false,
   tableId: row.table_id ?? undefined,
+  attending: row.attending ?? undefined,
+  dietaryRestrictions: row.dietary_restrictions ?? '',
+  rsvpNotes: row.rsvp_notes ?? '',
 });
 
 export const mapGuestRowToUI = (row: any): Guest => ({
@@ -25,6 +28,11 @@ export const mapGuestRowToUI = (row: any): Guest => ({
   confirmation: row.confirmation ?? 'No',
   dietary: row.dietary_notes ?? '',
   members: (row.guest_members ?? []).map(mapGuestMemberRowToUI),
+  maxGuests: row.max_guests ?? 1,
+  rsvpCode: row.rsvp_code ?? '',
+  rsvpStatus: row.rsvp_status ?? 'pendiente',
+  rsvpSubmittedAt: row.rsvp_submitted_at ?? undefined,
+  rsvpClosed: row.rsvp_closed ?? false,
 });
 
 export const mapTableRowToUI = (row: any): Table => ({
@@ -87,6 +95,10 @@ export const mapGuestUIToInsertPayload = (guest: Omit<Guest, 'id'>, weddingId: s
   certainty: normalizeValue(guest.certainty),
   confirmation: normalizeValue(guest.confirmation),
   dietary_notes: normalizeValue(guest.dietary),
+  max_guests: guest.maxGuests ?? 1,
+  rsvp_code: normalizeValue(guest.rsvpCode),
+  rsvp_status: guest.rsvpStatus ?? 'pendiente',
+  rsvp_closed: guest.rsvpClosed ?? false,
 });
 
 export const mapGuestUIToUpdatePatch = (updates: Partial<Guest>) => {
@@ -97,6 +109,11 @@ export const mapGuestUIToUpdatePatch = (updates: Partial<Guest>) => {
   if (updates.certainty !== undefined) patch.certainty = normalizeValue(updates.certainty);
   if (updates.confirmation !== undefined) patch.confirmation = normalizeValue(updates.confirmation);
   if (updates.dietary !== undefined) patch.dietary_notes = normalizeValue(updates.dietary);
+  if (updates.maxGuests !== undefined) patch.max_guests = updates.maxGuests;
+  if (updates.rsvpCode !== undefined) patch.rsvp_code = normalizeValue(updates.rsvpCode);
+  if (updates.rsvpStatus !== undefined) patch.rsvp_status = updates.rsvpStatus;
+  if (updates.rsvpClosed !== undefined) patch.rsvp_closed = updates.rsvpClosed;
+  if (updates.rsvpSubmittedAt !== undefined) patch.rsvp_submitted_at = updates.rsvpSubmittedAt;
   return patch;
 };
 
@@ -106,6 +123,9 @@ export const mapGuestMemberUIToInsertPayload = (member: Omit<GuestMember, 'id'>,
   age_category: normalizeValue(member.ageCategory),
   is_unknown: member.isUnknown ?? false,
   table_id: normalizeValue(member.tableId),
+  attending: member.attending ?? null,
+  dietary_restrictions: normalizeValue(member.dietaryRestrictions),
+  rsvp_notes: normalizeValue(member.rsvpNotes),
 });
 
 export const mapTableUIToInsertPayload = (table: Omit<Table, 'id'>, weddingId: string) => ({
@@ -240,7 +260,18 @@ export const createGuest = async (guest: Omit<Guest, 'id'>, weddingId: string) =
   console.log("CREATE_GUEST_START", { weddingId, payload: guest });
   try {
     const { members = [], ...guestData } = guest;
-    const payloadGuest = mapGuestUIToInsertPayload(guestData as any, weddingId);
+    
+    // RSVP defaults
+    const rsvpCode = generateRsvpCode();
+    const maxGuests = members.length > 0 ? members.length : (guest.maxGuests || 1);
+    
+    const payloadGuest = {
+      ...mapGuestUIToInsertPayload(guestData as any, weddingId),
+      rsvp_code: rsvpCode,
+      max_guests: maxGuests,
+      rsvp_status: 'pendiente',
+      rsvp_closed: false
+    };
     
     const { data: newGuest, error: guestError } = await supabase!
       .from('guests')
@@ -327,7 +358,10 @@ export const updateGuest = async (guestId: string, updates: Partial<Guest>, wedd
               name: mPayload.name,
               age_category: mPayload.age_category,
               is_unknown: mPayload.is_unknown,
-              table_id: mPayload.table_id
+              table_id: mPayload.table_id,
+              attending: mPayload.attending,
+              dietary_restrictions: mPayload.dietary_restrictions,
+              rsvp_notes: mPayload.rsvp_notes
             })
             .eq('id', m.id)
             .eq('guest_id', guestId);
@@ -707,6 +741,197 @@ export const updateTask = async (taskId: string, updates: Partial<Task>, wedding
   if (error) console.error("UPDATE_TASK_ERROR", error);
   else console.log("UPDATE_TASK_OK");
   return { error };
+};
+
+// --- RSVP Helpers ---
+
+export const generateRsvpCode = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 5; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
+
+export const updateGuestRsvpFields = async (guestId: string, weddingId: string, patch: { maxGuests?: number, rsvpClosed?: boolean, rsvpStatus?: string }) => {
+  checkSupabase();
+  checkWeddingId(weddingId);
+  console.log("UPDATE_RSVP_GROUP_START", { guestId, weddingId, patch });
+  
+  const dbPatch: any = {};
+  if (patch.maxGuests !== undefined) dbPatch.max_guests = patch.maxGuests;
+  if (patch.rsvpClosed !== undefined) dbPatch.rsvp_closed = patch.rsvpClosed;
+  if (patch.rsvpStatus !== undefined) dbPatch.rsvp_status = patch.rsvpStatus;
+
+  try {
+    const { error } = await supabase!
+      .from('guests')
+      .update(dbPatch)
+      .eq('id', guestId)
+      .eq('wedding_id', weddingId);
+    
+    if (error) throw error;
+    console.log("UPDATE_RSVP_GROUP_OK");
+    return { error: null };
+  } catch (error: any) {
+    console.error("UPDATE_RSVP_GROUP_ERROR", error);
+    return { error };
+  }
+};
+
+export const ensureGuestHasRsvpCode = async (guestId: string, weddingId: string) => {
+  checkSupabase();
+  checkWeddingId(weddingId);
+  
+  try {
+    const { data, error } = await supabase!
+      .from('guests')
+      .select('rsvp_code')
+      .eq('id', guestId)
+      .single();
+    
+    if (error) throw error;
+    
+    if (data.rsvp_code) return data.rsvp_code;
+    
+    // Generate and save
+    let code = generateRsvpCode();
+    let attempts = 0;
+    let success = false;
+    
+    while (attempts < 5 && !success) {
+      const { error: updateError } = await supabase!
+        .from('guests')
+        .update({ rsvp_code: code })
+        .eq('id', guestId);
+      
+      if (!updateError) {
+        success = true;
+      } else {
+        code = generateRsvpCode();
+        attempts++;
+      }
+    }
+    
+    return success ? code : null;
+  } catch (error) {
+    console.error("ENSURE_RSVP_CODE_ERROR", error);
+    return null;
+  }
+};
+
+export const getRsvpDashboardByWedding = async (weddingId: string) => {
+  checkSupabase();
+  checkWeddingId(weddingId);
+  console.log("GET_RSVP_DASHBOARD_START", { weddingId });
+  
+  try {
+    const { data: guests, error: guestsError } = await supabase!
+      .from('guests')
+      .select('id, group_name, category, max_guests, rsvp_code, rsvp_status, rsvp_closed, rsvp_submitted_at, guest_members(id, guest_id, name, attending, dietary_restrictions)')
+      .eq('wedding_id', weddingId);
+    
+    if (guestsError) throw guestsError;
+
+    const metrics = {
+      totalCupos: 0,
+      totalConfirmados: 0,
+      totalRechazados: 0,
+      pendientes: 0,
+      gruposConfirmados: 0,
+      gruposParciales: 0,
+      gruposCerrados: 0
+    };
+
+    const mappedGuests = guests.map(g => {
+      const members = g.guest_members || [];
+      const attendingCount = members.filter((m: any) => m.attending === true).length;
+      const rejectedCount = members.filter((m: any) => m.attending === false).length;
+      
+      metrics.totalCupos += g.max_guests || 0;
+      metrics.totalConfirmados += attendingCount;
+      metrics.totalRechazados += rejectedCount;
+      
+      if (g.rsvp_closed) metrics.gruposCerrados++;
+      
+      if (g.rsvp_status === 'confirmado') metrics.gruposConfirmados++;
+      else if (g.rsvp_status === 'parcial') metrics.gruposParciales++;
+
+      return {
+        ...mapGuestRowToUI(g),
+        attendingCount,
+        rejectedCount
+      };
+    });
+
+    metrics.pendientes = Math.max(0, metrics.totalCupos - metrics.totalConfirmados - metrics.totalRechazados);
+
+    console.log("GET_RSVP_DASHBOARD_OK", metrics);
+    return { data: { guests: mappedGuests, metrics }, error: null };
+  } catch (error: any) {
+    console.error("GET_RSVP_DASHBOARD_ERROR", error);
+    return { data: null, error };
+  }
+};
+
+export const getGuestByRsvpCode = async (code: string) => {
+  checkSupabase();
+  console.log("GET_GUEST_BY_RSVP_CODE_START", { code });
+  try {
+    const { data, error } = await supabase!
+      .from('guests')
+      .select('*, guest_members(*)')
+      .eq('rsvp_code', code.toUpperCase())
+      .single();
+    
+    if (error) throw error;
+    
+    const mapped = mapGuestRowToUI(data);
+    console.log("GET_GUEST_BY_RSVP_CODE_OK", { id: mapped.id });
+    return { data: mapped, error: null };
+  } catch (error: any) {
+    console.error("GET_GUEST_BY_RSVP_CODE_ERROR", error);
+    return { data: null, error };
+  }
+};
+
+export const submitRsvpResponse = async (guestId: string, members: any[], rsvpStatus: string) => {
+  checkSupabase();
+  console.log("SUBMIT_RSVP_START", { guestId, rsvpStatus });
+  try {
+    // 1. Update guest status and timestamp
+    const { error: guestError } = await supabase!
+      .from('guests')
+      .update({
+        rsvp_status: rsvpStatus,
+        rsvp_submitted_at: new Date().toISOString()
+      })
+      .eq('id', guestId);
+    
+    if (guestError) throw guestError;
+
+    // 2. Update members
+    for (const m of members) {
+      const { error: memberError } = await supabase!
+        .from('guest_members')
+        .update({
+          attending: m.attending,
+          dietary_restrictions: m.dietaryRestrictions,
+          rsvp_notes: m.rsvpNotes
+        })
+        .eq('id', m.id)
+        .eq('guest_id', guestId);
+      
+      if (memberError) throw memberError;
+    }
+
+    console.log("SUBMIT_RSVP_OK");
+    return { error: null };
+  } catch (error: any) {
+    console.error("SUBMIT_RSVP_ERROR", error);
+    return { error };
+  }
 };
 
 // WEDDINGS

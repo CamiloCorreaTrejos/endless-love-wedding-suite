@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { UserProfile } from '../../types';
 
@@ -8,7 +8,9 @@ interface AuthContextType {
   session: any | null;
   userProfile: UserProfile | null;
   loading: boolean;
+  authError: string | null;
   signOut: () => Promise<void>;
+  retryBootstrap: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,10 +20,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<any | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  
+  const bootstrappedRef = useRef(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchOrCreateProfile = async (userId: string, email: string) => {
+  const loadProfile = async (userId: string, email: string) => {
+    console.log('AUTH_PROFILE_START', userId);
     try {
-      console.log('[Auth] Fetching profile for:', userId);
       let { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -29,114 +35,129 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .maybeSingle();
 
       if (error) {
-        console.error('[Profiles Fetch Error]:', error);
+        console.error('AUTH_PROFILE_ERROR (Fetch):', error);
         throw error;
       }
 
       if (!profile) {
-        console.log('[Auth] Profile not found, creating...');
+        console.log('AUTH_PROFILE_NOT_FOUND, creating...');
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
           .insert({ id: userId, email, role: 'admin', full_name: '' })
           .select()
           .single();
+        
         if (insertError) {
-          console.error('[Profiles Insert Error]:', insertError);
+          console.error('AUTH_PROFILE_ERROR (Insert):', insertError);
           throw insertError;
         }
         profile = newProfile;
       }
       
-      console.log('[Auth] Profile synced:', profile?.id);
+      console.log('AUTH_PROFILE_OK', profile?.id);
       setUserProfile(profile as UserProfile);
       return profile as UserProfile;
     } catch (err) {
-      console.error('[Profiles Sync Critical Error]:', err);
+      console.error('AUTH_PROFILE_ERROR (Critical):', err);
       
-      // Resilient Fallback: If DB is unreachable or schema is missing, 
-      // provide a local "Demo" profile so the user can at least see the app.
+      // Resilient Fallback
       const fallbackProfile: UserProfile = {
         id: userId,
         email: email,
         role: 'admin',
         full_name: 'Usuario (Modo Resiliente)',
-        wedding_id: '00000000-0000-0000-0000-000000000000' // Placeholder UUID
+        wedding_id: '00000000-0000-0000-0000-000000000000'
       };
       
-      console.warn('[Auth] Using fallback profile due to database error.');
+      console.warn('AUTH_PROFILE_FALLBACK_USED');
       setUserProfile(fallbackProfile);
       return fallbackProfile;
     }
   };
 
-  useEffect(() => {
-    let mounted = true;
+  const bootstrap = async () => {
+    if (bootstrappedRef.current) return;
+    bootstrappedRef.current = true;
 
-    const initSession = async () => {
-      try {
-        setLoading(true);
-        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) throw sessionError;
+    console.log('AUTH_BOOT_START');
+    setLoading(true);
+    setAuthError(null);
 
-        if (mounted) {
-          setSession(initialSession);
-          if (initialSession?.user) {
-            setAuthUser(initialSession.user);
-            await fetchOrCreateProfile(initialSession.user.id, initialSession.user.email || '');
-          } else {
-            setAuthUser(null);
-            setUserProfile(null);
-          }
-        }
-      } catch (err) {
-        console.error('[Auth Init Error]:', err);
-        if (mounted) {
-          setAuthUser(null);
-          setUserProfile(null);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+    // Safety timeout: 8 seconds
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      if (loading) {
+        console.warn('AUTH_BOOT_TIMEOUT');
+        setLoading(false);
+        setAuthError("No pudimos cargar tu sesión. Reintentar");
       }
-    };
+    }, 8000);
 
-    initSession();
+    try {
+      const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('AUTH_BOOT_SESSION_ERROR', sessionError);
+        throw sessionError;
+      }
+
+      if (initialSession?.user) {
+        console.log('AUTH_BOOT_SESSION_OK', initialSession.user.id);
+        setSession(initialSession);
+        setAuthUser(initialSession.user);
+        await loadProfile(initialSession.user.id, initialSession.user.email || '');
+      } else {
+        console.log('AUTH_BOOT_NO_SESSION');
+        setSession(null);
+        setAuthUser(null);
+        setUserProfile(null);
+      }
+    } catch (err) {
+      console.error('AUTH_BOOT_CRITICAL_ERROR', err);
+      setAuthError("Error crítico al iniciar sesión.");
+    } finally {
+      console.log('AUTH_LOADING_END');
+      setLoading(false);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    }
+  };
+
+  useEffect(() => {
+    bootstrap();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log("AUTH_STATE_CHANGE", event, !!currentSession);
+      console.log("AUTH_EVENT", event, !!currentSession);
       
-      if (!mounted) return;
-
-      try {
-        setSession(currentSession);
-        
-        if (currentSession?.user) {
-          setAuthUser(currentSession.user);
-          
-          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') {
-            await fetchOrCreateProfile(currentSession.user.id, currentSession.user.email || '');
-          }
-        } else {
-          setAuthUser(null);
-          setUserProfile(null);
-          if (event === 'SIGNED_OUT') {
-            setLoading(false);
-          }
+      setSession(currentSession);
+      
+      if (currentSession?.user) {
+        setAuthUser(currentSession.user);
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+          await loadProfile(currentSession.user.id, currentSession.user.email || '');
         }
-      } catch (err) {
-        console.error('[Auth State Change Error]:', err);
-      } finally {
-        if (mounted) {
+      } else {
+        setAuthUser(null);
+        setUserProfile(null);
+        if (event === 'SIGNED_OUT') {
           setLoading(false);
         }
       }
     });
 
+    // Cross-tab sync
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key && e.key.includes('endless-love-auth')) {
+        console.log('AUTH_STORAGE_SYNC_TRIGGERED');
+        bootstrappedRef.current = false;
+        bootstrap();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
     return () => {
-      mounted = false;
       subscription.unsubscribe();
+      window.removeEventListener('storage', handleStorageChange);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
@@ -144,8 +165,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
   };
 
+  const retryBootstrap = () => {
+    bootstrappedRef.current = false;
+    bootstrap();
+  };
+
   return (
-    <AuthContext.Provider value={{ authUser, session, userProfile, loading, signOut }}>
+    <AuthContext.Provider value={{ authUser, session, userProfile, loading, authError, signOut, retryBootstrap }}>
       {children}
     </AuthContext.Provider>
   );
