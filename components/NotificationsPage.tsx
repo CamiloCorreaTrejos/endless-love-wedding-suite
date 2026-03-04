@@ -59,7 +59,7 @@ export const NotificationsPage: React.FC = () => {
     setSuccessMessage(null);
     try {
       console.log('FCM_SYNC_START');
-      const token = await getFcmToken(import.meta.env.VITE_FIREBASE_VAPID_KEY);
+      const token = await getFcmToken();
       if (token) {
         console.log('SAVE_PUSH_TOKEN_START');
         const { error } = await upsertNotificationToken(token, weddingId, userId);

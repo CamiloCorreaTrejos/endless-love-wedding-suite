@@ -1,3 +1,38 @@
+/* eslint-disable no-undef */
+importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
+
+// Firebase config (público)
+firebase.initializeApp({
+  apiKey: "AIzaSyDhx0N0SuCp2MojbuBiQlajv9Mu7wqOlP8",
+  authDomain: "endless-love-organizer.firebaseapp.com",
+  projectId: "endless-love-organizer",
+  storageBucket: "endless-love-organizer.firebasestorage.app",
+  messagingSenderId: "781574420745",
+  appId: "1:781574420745:web:ff71a5bc62398bf8a73bd8",
+});
+
+const messaging = firebase.messaging();
+
+// Background messages (FCM)
+messaging.onBackgroundMessage((payload) => {
+  const title = payload?.notification?.title || "Endless Love";
+  const options = {
+    body: payload?.notification?.body || "Tienes una nueva notificación.",
+    icon: "/pwa-192.png",
+    data: payload?.data || {},
+  };
+  self.registration.showNotification(title, options);
+});
+
+// Click
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification?.data?.url || "/notificaciones";
+  event.waitUntil(clients.openWindow(url));
+});
+
+// PWA & Generic Push support
 self.addEventListener('install', (event) => {
   console.log('[SW] Install');
   self.skipWaiting();
@@ -12,7 +47,11 @@ self.addEventListener('push', (event) => {
   console.log('[SW] Push Received');
   let data = {};
   if (event.data) {
-    data = event.data.json();
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = { message: event.data.text() };
+    }
   }
 
   const title = data.title || 'Endless Love';
@@ -26,24 +65,4 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
-});
-
-self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification Clicked');
-  event.notification.close();
-  const urlToOpen = event.notification.data.url;
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      for (let i = 0; i < windowClients.length; i++) {
-        const client = windowClients[i];
-        if (client.url === urlToOpen && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
-    })
-  );
 });

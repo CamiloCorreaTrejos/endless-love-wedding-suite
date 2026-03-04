@@ -16,18 +16,4 @@ root.render(
   </React.StrictMode>
 );
 
-// Register Service Worker
-/*
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    console.log('SW_REGISTER_START');
-    navigator.serviceWorker.register('/firebase-messaging-sw.js')
-      .then(registration => {
-        console.log('SW_REGISTER_OK', registration.scope);
-      })
-      .catch(err => {
-        console.error('SW_REGISTER_ERROR', err);
-      });
-  });
-}
-*/
+// Service Worker registration is handled in src/lib/push.ts

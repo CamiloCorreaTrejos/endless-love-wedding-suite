@@ -15,7 +15,29 @@ export const requestNotificationPermission = async () => {
   return permission;
 };
 
-export const getFcmToken = async (vapidKey: string) => {
+const ensureServiceWorker = async () => {
+  // Si ya hay un SW controlando la página, úsalo
+  if (navigator.serviceWorker.controller) {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg) return reg;
+  }
+
+  // Si no hay registro, registra el SW principal
+  const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+
+  // Espera a que esté listo (activo y controlando)
+  await navigator.serviceWorker.ready;
+
+  // Si todavía no controla (primera vez), recarga para tomar control
+  if (!navigator.serviceWorker.controller) {
+    window.location.reload();
+    return null;
+  }
+
+  return reg;
+};
+
+export const getFcmToken = async () => {
   if (!isPushSupported()) return null;
 
   const supported = await isSupported().catch(() => false);
@@ -25,49 +47,28 @@ export const getFcmToken = async (vapidKey: string) => {
   }
 
   try {
-    console.log("FCM_TOKEN_FLOW_START");
+    console.log('FCM_SW_READY_WAIT');
+    const registration = await ensureServiceWorker();
+    if (!registration) return null;
 
-    // 1) Asegura permiso
-    await requestNotificationPermission();
+    const permission = await requestNotificationPermission();
+    if (permission !== 'granted') return null;
 
-    // 2) Asegura que el SW correcto esté registrado (una sola vez)
-    console.log("FCM_SW_READY_WAIT");
-    const reg = await navigator.serviceWorker.getRegistration();
-
-    // si no hay registro, registramos firebase-messaging-sw.js
-    let activeReg = reg;
-    if (!activeReg) {
-      console.log("FCM_SW_REGISTER_START", { path: "/firebase-messaging-sw.js" });
-      activeReg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-      console.log("FCM_SW_REGISTER_OK");
-    }
-
-    // 3) Espera a que esté listo
-    await navigator.serviceWorker.ready;
-
-    // 4) Si aún no controla la página, recarga una vez (necesario para algunos casos)
-    if (!navigator.serviceWorker.controller) {
-      console.warn("FCM_SW_NO_CONTROLLER_RELOAD");
-      window.location.reload();
-      return null;
-    }
-
-    // 5) Token
-    console.log("FCM_TOKEN_START");
+    console.log('FCM_TOKEN_START');
     const token = await getToken(messaging as any, {
-      vapidKey,
-      serviceWorkerRegistration: activeReg!,
+      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+      serviceWorkerRegistration: registration
     });
 
-    if (!token) {
-      console.warn("FCM_TOKEN_EMPTY");
-      return null;
+    if (token) {
+      console.log('FCM_TOKEN_OK');
+      return token;
     }
 
-    console.log("FCM_TOKEN_OK");
-    return token;
-  } catch (err) {
-    console.error("FCM_TOKEN_ERROR", err);
+    console.warn('FCM_TOKEN_EMPTY');
+    return null;
+  } catch (error) {
+    console.error('FCM_TOKEN_ERROR', error);
     return null;
   }
 };
