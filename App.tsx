@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { GuestList } from './components/GuestList';
@@ -9,6 +9,8 @@ import { SeatingPlanner } from './components/SeatingPlanner';
 import { VendorManager } from './components/VendorManager';
 import { RsvpManager } from './components/RsvpManager';
 import { PublicRsvp } from './components/PublicRsvp';
+import { NotificationsPage } from './components/NotificationsPage';
+import { ToastContainer } from './components/ToastContainer';
 import { Login } from './components/Login';
 import { ElegantLoader } from './components/ElegantLoader';
 import { AlertCircle } from 'lucide-react';
@@ -34,12 +36,16 @@ import {
 } from './services/supabase';
 import { AuthProvider, useAuth } from './src/lib/AuthContext';
 import { WeddingDataProvider, useWeddingData } from './src/lib/WeddingDataContext';
+import { NotificationsProvider, useNotifications } from './src/contexts/NotificationsContext';
 
 const AppContent: React.FC = () => {
   const { authUser, userProfile, loading: authLoading, authError, signOut, retryBootstrap } = useAuth();
   const { weddingData, loading: dataLoading, error: dataError, refetchAll, setWeddingData } = useWeddingData();
+  const { refetch: refetchNotifs } = useNotifications();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const weddingId = userProfile?.wedding_id;
 
   // --- RSVP Route Detection ---
   const path = window.location.pathname;
@@ -50,7 +56,16 @@ const AppContent: React.FC = () => {
     return <PublicRsvp code={rsvpCode} />;
   }
 
-  const weddingId = userProfile?.wedding_id;
+  // --- Notifications Polling ---
+  useEffect(() => {
+    if (weddingId) {
+      refetchNotifs(weddingId, userProfile?.id);
+      const interval = setInterval(() => {
+        refetchNotifs(weddingId, userProfile?.id);
+      }, 30000); // Poll every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [weddingId, userProfile?.id, refetchNotifs]);
 
   // --- Handlers de Datos con Supabase ---
   const handleAddGuest = async (guest: Omit<Guest, 'id'>) => {
@@ -273,7 +288,12 @@ const AppContent: React.FC = () => {
     }
   };
 
+  // --- Notifications Route Detection ---
+  const isNotifRoute = path === '/notificaciones';
+  
   const renderContent = () => {
+    if (isNotifRoute) return <NotificationsPage />;
+    
     switch (activeTab) {
       case 'dashboard': return <Dashboard data={weddingData} />;
       case 'guests': return <GuestList guests={weddingData.guests} tables={weddingData.tables} onAddGuest={handleAddGuest} onRemoveGuest={handleRemoveGuest} onUpdateGuest={handleUpdateGuest} />;
@@ -357,6 +377,7 @@ const AppContent: React.FC = () => {
 
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab} onLogout={signOut} data={weddingData}>
+      <ToastContainer />
       {isResilientMode && (
         <div className="bg-amber-50 border border-amber-100 p-3 rounded-xl mb-6 flex items-center justify-between gap-3 text-amber-700 text-[10px] font-bold uppercase tracking-widest animate-in slide-in-from-top-2">
           <div className="flex items-center gap-2">
@@ -380,7 +401,9 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <AuthContextConsumer />
+      <NotificationsProvider>
+        <AuthContextConsumer />
+      </NotificationsProvider>
     </AuthProvider>
   );
 };

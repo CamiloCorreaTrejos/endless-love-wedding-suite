@@ -24,15 +24,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const bootstrappedRef = useRef(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const loadingRef = useRef(true);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
 
   const loadProfile = async (userId: string, email: string) => {
     console.log('AUTH_PROFILE_START', userId);
+    
+    // Safety timeout for profile load: 6 seconds
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Profile load timeout')), 6000)
+    );
+
     try {
-      let { data: profile, error } = await supabase
+      console.log('AUTH_PROFILE_QUERY_INIT');
+      const fetchPromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
+
+      console.log('AUTH_PROFILE_AWAITING_RES');
+      const { data: profile, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      console.log('AUTH_PROFILE_RES_RECEIVED', { hasData: !!profile, hasError: !!error });
 
       if (error) {
         console.error('AUTH_PROFILE_ERROR (Fetch):', error);
@@ -51,7 +67,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('AUTH_PROFILE_ERROR (Insert):', insertError);
           throw insertError;
         }
-        profile = newProfile;
+        console.log('AUTH_PROFILE_CREATED', newProfile?.id);
+        setUserProfile(newProfile as UserProfile);
+        return newProfile as UserProfile;
       }
       
       console.log('AUTH_PROFILE_OK', profile?.id);
@@ -83,15 +101,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     setAuthError(null);
 
-    // Safety timeout: 8 seconds
+    // Safety timeout: 10 seconds
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      if (loading) {
-        console.warn('AUTH_BOOT_TIMEOUT');
+      if (loadingRef.current) {
+        console.warn('AUTH_BOOT_TIMEOUT - Forcing loading end');
         setLoading(false);
-        setAuthError("No pudimos cargar tu sesión. Reintentar");
+        // If we timed out but have a user, we might still be able to show something
+        if (!authUser) {
+          setAuthError("La conexión está tardando más de lo esperado. Por favor, recarga o intenta más tarde.");
+        }
       }
-    }, 8000);
+    }, 10000);
 
     try {
       const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();

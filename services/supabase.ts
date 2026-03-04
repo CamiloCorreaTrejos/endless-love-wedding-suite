@@ -1,6 +1,6 @@
 
 import { supabase } from "../src/lib/supabaseClient";
-import { Guest, Table, BudgetItem, Task, Vendor, GuestMember } from "../types";
+import { Guest, Table, BudgetItem, Task, Vendor, GuestMember, NotificationItem } from "../types";
 
 export { supabase };
 
@@ -930,6 +930,177 @@ export const submitRsvpResponse = async (guestId: string, members: any[], rsvpSt
     return { error: null };
   } catch (error: any) {
     console.error("SUBMIT_RSVP_ERROR", error);
+    return { error };
+  }
+};
+
+// --- Notifications ---
+
+export const mapNotificationRowToUI = (row: any): NotificationItem => ({
+  id: row.id,
+  weddingId: row.wedding_id,
+  userId: row.user_id,
+  title: row.title,
+  message: row.message,
+  type: row.type,
+  severity: row.severity,
+  link: row.link,
+  isRead: row.is_read,
+  createdAt: row.created_at,
+});
+
+export const getNotificationsByWedding = async (weddingId: string, userId?: string) => {
+  checkSupabase();
+  checkWeddingId(weddingId);
+  console.log("GET_NOTIFS_START", { weddingId, userId });
+  
+  try {
+    let query = supabase!
+      .from('notifications')
+      .select('*')
+      .eq('wedding_id', weddingId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    
+    if (userId) {
+      query = query.or(`user_id.is.null,user_id.eq.${userId}`);
+    } else {
+      query = query.is('user_id', null);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const mapped = (data || []).map(mapNotificationRowToUI);
+    console.log("GET_NOTIFS_OK", { count: mapped.length });
+    return { data: mapped, error: null };
+  } catch (error: any) {
+    console.error("GET_NOTIFS_ERROR", error);
+    return { data: null, error };
+  }
+};
+
+export const markNotificationRead = async (id: string, weddingId: string) => {
+  checkSupabase();
+  checkWeddingId(weddingId);
+  console.log("READ_NOTIF_START", { id, weddingId });
+  
+  try {
+    const { error } = await supabase!
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('wedding_id', weddingId);
+    
+    if (error) throw error;
+    console.log("READ_NOTIF_OK");
+    return { error: null };
+  } catch (error: any) {
+    console.error("READ_NOTIF_ERROR", error);
+    return { error };
+  }
+};
+
+export const markAllNotificationsRead = async (weddingId: string, userId?: string) => {
+  checkSupabase();
+  checkWeddingId(weddingId);
+  console.log("READ_ALL_NOTIFS_START", { weddingId, userId });
+  
+  try {
+    let query = supabase!
+      .from('notifications')
+      .update({ is_read: true, read_at: new Date().toISOString() })
+      .eq('wedding_id', weddingId)
+      .eq('is_read', false);
+    
+    if (userId) {
+      query = query.or(`user_id.is.null,user_id.eq.${userId}`);
+    } else {
+      query = query.is('user_id', null);
+    }
+
+    const { error } = await query;
+    if (error) throw error;
+    console.log("READ_ALL_NOTIFS_OK");
+    return { error: null };
+  } catch (error: any) {
+    console.error("READ_ALL_NOTIFS_ERROR", error);
+    return { error };
+  }
+};
+
+export const createNotification = async (payload: Omit<NotificationItem, 'id' | 'createdAt' | 'isRead'>, weddingId: string) => {
+  checkSupabase();
+  checkWeddingId(weddingId);
+  console.log("CREATE_NOTIF_START", { payload, weddingId });
+  
+  try {
+    const { data, error } = await supabase!
+      .from('notifications')
+      .insert({
+        wedding_id: weddingId,
+        user_id: payload.userId,
+        title: payload.title,
+        message: payload.message,
+        type: payload.type,
+        severity: payload.severity,
+        link: payload.link,
+        is_read: false
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    console.log("CREATE_NOTIF_OK");
+    return { data: mapNotificationRowToUI(data), error: null };
+  } catch (error: any) {
+    console.error("CREATE_NOTIF_ERROR", error);
+    return { data: null, error };
+  }
+};
+
+export const upsertNotificationToken = async (token: string, weddingId: string, userId: string) => {
+  checkSupabase();
+  checkWeddingId(weddingId);
+  console.log("UPSERT_TOKEN_START", { token, weddingId, userId });
+  
+  try {
+    const { error } = await supabase!
+      .from('notification_tokens')
+      .upsert({
+        token,
+        wedding_id: weddingId,
+        user_id: userId,
+        platform: 'web',
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'token' });
+    
+    if (error) throw error;
+    console.log("UPSERT_TOKEN_OK");
+    return { error: null };
+  } catch (error: any) {
+    console.error("UPSERT_TOKEN_ERROR", error);
+    return { error };
+  }
+};
+
+export const disableNotificationTokens = async (weddingId: string, userId: string) => {
+  checkSupabase();
+  checkWeddingId(weddingId);
+  console.log("DISABLE_TOKENS_START", { weddingId, userId });
+  
+  try {
+    const { error } = await supabase!
+      .from('notification_tokens')
+      .delete()
+      .eq('wedding_id', weddingId)
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    console.log("DISABLE_TOKENS_OK");
+    return { error: null };
+  } catch (error: any) {
+    console.error("DISABLE_TOKENS_ERROR", error);
     return { error };
   }
 };

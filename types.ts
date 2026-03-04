@@ -96,3 +96,16 @@ export interface WeddingData {
   tables: Table[];
   vendors: Vendor[];
 }
+
+export interface NotificationItem {
+  id: string;
+  weddingId: string;
+  userId: string | null;
+  title: string;
+  message: string;
+  type: 'task_due' | 'vendor_due' | 'budget_alert' | 'general';
+  severity: 'info' | 'warning' | 'urgent';
+  link: string | null;
+  isRead: boolean;
+  createdAt: string;
+}

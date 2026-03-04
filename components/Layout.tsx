@@ -1,6 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { ICONS, COLORS } from '../constants';
 import { WeddingData } from '../types';
+import { useNotifications } from '../src/contexts/NotificationsContext';
+import { useAuth } from '../src/lib/AuthContext';
+import { NotificationPanel } from './NotificationPanel';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -13,7 +16,8 @@ import {
   LayoutGrid,
   Menu,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Bell
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -28,6 +32,10 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isNotifPanelOpen, setIsNotifPanelOpen] = useState(false);
+
+  const { unreadCount } = useNotifications();
+  const { userProfile } = useAuth();
 
   const effectiveCollapsed = isCollapsed && !isHovered;
 
@@ -287,6 +295,30 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
 
       {/* Contenido Principal */}
       <main className={`flex-1 relative flex flex-col bg-stone-50/50 ${activeTab === 'seating' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        {/* Topbar for Desktop Notifications */}
+        <div className="hidden md:flex justify-end p-6 absolute top-0 right-0 z-40">
+          <div className="relative">
+            <button 
+              onClick={() => setIsNotifPanelOpen(!isNotifPanelOpen)}
+              className="p-3 bg-white rounded-2xl border border-stone-100 shadow-sm text-stone-400 hover:text-[#0F1A2E] hover:shadow-md transition-all relative"
+            >
+              <Bell size={20} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+            {isNotifPanelOpen && (
+              <NotificationPanel 
+                onClose={() => setIsNotifPanelOpen(false)} 
+                weddingId={userProfile?.wedding_id || ''}
+                userId={userProfile?.id}
+              />
+            )}
+          </div>
+        </div>
+
         {/* Mobile Header */}
         <div className="md:hidden p-4 flex items-center justify-between border-b bg-white sticky top-0 z-30">
            <div className="flex items-center gap-2">
@@ -302,6 +334,28 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
              <h1 className="text-lg font-bold text-stone-800 serif">Endless Love</h1>
            </div>
            <div className="flex items-center gap-3">
+              <div className="relative">
+                <button 
+                  onClick={() => setIsNotifPanelOpen(!isNotifPanelOpen)}
+                  className="p-2 text-stone-400"
+                >
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center border border-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+                {isNotifPanelOpen && (
+                  <div className="fixed inset-x-4 top-16 z-[100]">
+                    <NotificationPanel 
+                      onClose={() => setIsNotifPanelOpen(false)} 
+                      weddingId={userProfile?.wedding_id || ''}
+                      userId={userProfile?.id}
+                    />
+                  </div>
+                )}
+              </div>
               <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-[10px] font-bold text-stone-500">
                 {data.partner1[0]}{data.partner2[0]}
               </div>
