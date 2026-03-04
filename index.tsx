@@ -20,7 +20,7 @@ root.render(
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     console.log('SW_REGISTER_START');
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
       .then(registration => {
         console.log('SW_REGISTER_OK', registration.scope);
       })
