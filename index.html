@@ -10,6 +10,9 @@
       // CRITICAL: Fix for "Cannot set property fetch of #<Window> which has only a getter"
       // This must be the very first script to run.
       (function() {
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (!isLocal) return;
+
         try {
           const nativeFetch = window.fetch;
           if (nativeFetch) {
