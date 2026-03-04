@@ -2,8 +2,7 @@
 importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
 
-// Configuración pública de Firebase para el Service Worker
-// Nota: Estos valores son públicos por naturaleza en aplicaciones web.
+// Firebase config (público)
 firebase.initializeApp({
   apiKey: "AIzaSyDhx0N0SuCp2MojbuBiQlajv9Mu7wqOlP8",
   authDomain: "endless-love-organizer.firebaseapp.com",
@@ -15,8 +14,8 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// Background messages (FCM)
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
   const title = payload?.notification?.title || "Endless Love";
   const options = {
     body: payload?.notification?.body || "Tienes una nueva notificación.",
@@ -26,8 +25,13 @@ messaging.onBackgroundMessage((payload) => {
   self.registration.showNotification(title, options);
 });
 
+// Click
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = event.notification?.data?.url || "/notificaciones";
   event.waitUntil(clients.openWindow(url));
 });
+
+// IMPORTANT: activar inmediatamente updates del SW
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));

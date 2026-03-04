@@ -1,103 +1,73 @@
-import { getMessagingSafe } from './firebase';
-import { getToken } from 'firebase/messaging';
-
-const VAPID_KEY =
-  (import.meta as any)?.env?.VITE_FIREBASE_VAPID_KEY ||
-  (window as any)?.__ENV__?.VITE_FIREBASE_VAPID_KEY ||
-  'BMNHpF38rE3ILjPbHyUkkPU0cTDiEaw7PZ1X505dVgdwX5O17uwlF80c9SKjiP8brPWTjTJBz0I_xcsLv6WRXX8';
-
-const SW_PATH = '/firebase-messaging-sw.js';
-
-// Evita intentar Push dentro de previews/iframes (Build / Studio)
-const isInIframe = () => {
-  try { return window.self !== window.top; } catch { return true; }
-};
+import { getToken, isSupported } from "firebase/messaging";
+import { messaging } from "./firebase";
 
 export const isPushSupported = () => {
-  // Push solo funciona en https o localhost
-  const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
-  return (
-    isSecure &&
-    !isInIframe() &&
-    'serviceWorker' in navigator &&
-    'PushManager' in window &&
-    'Notification' in window
-  );
+  return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 };
 
 export const requestNotificationPermission = async () => {
-  if (!isPushSupported()) throw new Error('Push no soportado en este entorno (iframe o no https).');
+  if (!isPushSupported()) throw new Error("Push no soportado en este navegador.");
 
   const permission = await Notification.requestPermission();
-  if (permission !== 'granted') {
-    console.warn('FCM_PERMISSION_DENIED');
-    throw new Error('Permiso no concedido para notificaciones.');
-  }
-  console.log('FCM_PERMISSION_GRANTED');
+  if (permission !== "granted") throw new Error("Permiso de notificaciones no concedido.");
+
+  console.log("FCM_PERMISSION_GRANTED");
   return permission;
 };
 
-let cachedRegistration: ServiceWorkerRegistration | null = null;
-
-const ensureFirebaseSwReady = async () => {
+export const getFcmToken = async (vapidKey: string) => {
   if (!isPushSupported()) return null;
 
-  // Reusa registro si ya existe
-  if (cachedRegistration) return cachedRegistration;
-
-  console.log('FCM_SW_REGISTER_START', { path: SW_PATH });
-
-  const reg = await navigator.serviceWorker.register(SW_PATH, { scope: '/' });
-
-  // IMPORTANTÍSIMO: esperar a que el SW esté "ready" (activated/controlando)
-  await navigator.serviceWorker.ready;
-
-  // Guarda cache
-  cachedRegistration = reg;
-
-  console.log('FCM_SW_REGISTER_OK');
-  return reg;
-};
-
-export const getFcmToken = async () => {
-  if (!isPushSupported()) {
-    console.warn('FCM_UNSUPPORTED_ENV');
-    return null;
-  }
-
-  if (!VAPID_KEY) {
-    console.error('FCM_VAPID_MISSING');
+  const supported = await isSupported().catch(() => false);
+  if (!supported) {
+    console.warn("FCM_NOT_SUPPORTED");
     return null;
   }
 
   try {
+    console.log("FCM_TOKEN_FLOW_START");
+
+    // 1) Asegura permiso
     await requestNotificationPermission();
 
-    const registration = await ensureFirebaseSwReady();
-    if (!registration) return null;
+    // 2) Asegura que el SW correcto esté registrado (una sola vez)
+    console.log("FCM_SW_READY_WAIT");
+    const reg = await navigator.serviceWorker.getRegistration();
 
-    const messaging = await getMessagingSafe();
-    if (!messaging) {
-      console.warn("FCM_NO_MESSAGING");
+    // si no hay registro, registramos firebase-messaging-sw.js
+    let activeReg = reg;
+    if (!activeReg) {
+      console.log("FCM_SW_REGISTER_START", { path: "/firebase-messaging-sw.js" });
+      activeReg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+      console.log("FCM_SW_REGISTER_OK");
+    }
+
+    // 3) Espera a que esté listo
+    await navigator.serviceWorker.ready;
+
+    // 4) Si aún no controla la página, recarga una vez (necesario para algunos casos)
+    if (!navigator.serviceWorker.controller) {
+      console.warn("FCM_SW_NO_CONTROLLER_RELOAD");
+      window.location.reload();
       return null;
     }
 
-    console.log('FCM_TOKEN_START');
-
-    const token = await getToken(messaging, {
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: registration
+    // 5) Token
+    console.log("FCM_TOKEN_START");
+    const token = await getToken(messaging as any, {
+      vapidKey,
+      serviceWorkerRegistration: activeReg!,
     });
 
     if (!token) {
-      console.warn('FCM_TOKEN_EMPTY');
+      console.warn("FCM_TOKEN_EMPTY");
       return null;
     }
 
-    console.log('FCM_TOKEN_OK');
+    console.log("FCM_TOKEN_OK");
     return token;
   } catch (err) {
-    console.error('FCM_TOKEN_ERROR', err);
+    console.error("FCM_TOKEN_ERROR", err);
     return null;
   }
 };

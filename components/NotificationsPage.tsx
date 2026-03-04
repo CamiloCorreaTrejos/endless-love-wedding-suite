@@ -43,22 +43,32 @@ export const NotificationsPage: React.FC = () => {
     }
   }, []);
 
-  const handleActivatePush = async () => {
+  const handleRequestPermission = async () => {
+    try {
+      await requestNotificationPermission();
+      setPushStatus('granted');
+      setSuccessMessage("Permiso concedido");
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleSyncToken = async () => {
     if (!weddingId || !userId) return;
     setIsActivating(true);
     setSuccessMessage(null);
     try {
-      console.log('FCM_ACTIVATION_START');
-      const token = await getFcmToken();
+      console.log('FCM_SYNC_START');
+      const token = await getFcmToken(import.meta.env.VITE_FIREBASE_VAPID_KEY);
       if (token) {
         console.log('SAVE_PUSH_TOKEN_START');
         const { error } = await upsertNotificationToken(token, weddingId, userId);
         if (error) throw error;
         console.log('SAVE_PUSH_TOKEN_OK');
         setPushStatus('granted');
-        setSuccessMessage("Notificaciones activadas correctamente");
+        setSuccessMessage("Token sincronizado correctamente");
       } else {
-        throw new Error("No se pudo obtener el token de notificaciones.");
+        throw new Error("No se pudo obtener el token. Asegúrate de haber dado permisos y que el navegador sea compatible.");
       }
     } catch (err: any) {
       console.error('SAVE_PUSH_TOKEN_ERROR', err);
@@ -167,13 +177,22 @@ export const NotificationsPage: React.FC = () => {
                     </div>
                   )}
 
-                  {(pushStatus === 'default' || pushStatus === 'granted') && (
+                  {(pushStatus === 'default' || pushStatus === 'denied') && (
                     <button 
-                      onClick={handleActivatePush}
-                      disabled={isActivating}
-                      className={`w-full py-3 bg-white border border-stone-200 rounded-xl text-[9px] font-bold text-stone-600 uppercase tracking-widest hover:bg-stone-100 transition-all ${isActivating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={handleRequestPermission}
+                      className="w-full py-3 bg-white border border-stone-200 rounded-xl text-[9px] font-bold text-stone-600 uppercase tracking-widest hover:bg-stone-100 transition-all"
                     >
-                      {isActivating ? 'Activando...' : pushStatus === 'granted' ? 'Sincronizar Token' : 'Activar Notificaciones'}
+                      Activar Notificaciones
+                    </button>
+                  )}
+
+                  {pushStatus === 'granted' && (
+                    <button 
+                      onClick={handleSyncToken}
+                      disabled={isActivating}
+                      className={`w-full py-3 bg-[#0F1A2E] text-white rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-opacity-90 transition-all shadow-lg shadow-[#0F1A2E]/10 ${isActivating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {isActivating ? 'Sincronizando...' : 'Sincronizar Token'}
                     </button>
                   )}
 

@@ -17,6 +17,7 @@ root.render(
 );
 
 // Register Service Worker
+/*
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     console.log('SW_REGISTER_START');
@@ -29,3 +30,4 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       });
   });
 }
+*/
