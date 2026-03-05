@@ -1,74 +1,68 @@
-import { getToken, isSupported } from "firebase/messaging";
-import { messaging } from "./firebase";
+import { getToken } from "firebase/messaging";
+import { getFirebaseMessaging } from "./firebase";
 
 export const isPushSupported = () => {
-  return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  return (
+    typeof window !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window
+  );
+};
+
+const isInIframe = () => {
+  try { return window.self !== window.top; } catch { return true; }
 };
 
 export const requestNotificationPermission = async () => {
   if (!isPushSupported()) throw new Error("Push no soportado en este navegador.");
 
   const permission = await Notification.requestPermission();
-  if (permission !== "granted") throw new Error("Permiso de notificaciones no concedido.");
-
-  console.log("FCM_PERMISSION_GRANTED");
+  if (permission !== "granted") throw new Error("Permiso no concedido para notificaciones.");
   return permission;
 };
 
-const ensureServiceWorker = async () => {
-  // Si ya hay un SW controlando la página, úsalo
-  if (navigator.serviceWorker.controller) {
-    const reg = await navigator.serviceWorker.getRegistration();
-    if (reg) return reg;
-  }
-
-  // Si no hay registro, registra el SW principal
-  const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-
-  // Espera a que esté listo (activo y controlando)
-  await navigator.serviceWorker.ready;
-
-  // Si todavía no controla (primera vez), recarga para tomar control
-  if (!navigator.serviceWorker.controller) {
-    window.location.reload();
+export const getFcmToken = async () => {
+  // 🔥 en preview embebido suele fallar: mejor no intentar
+  if (isInIframe()) {
+    console.warn("FCM_BLOCKED_IFRAME: Abre la app en una pestaña normal para activar push.");
     return null;
   }
 
-  return reg;
-};
-
-export const getFcmToken = async () => {
   if (!isPushSupported()) return null;
 
-  const supported = await isSupported().catch(() => false);
-  if (!supported) {
-    console.warn("FCM_NOT_SUPPORTED");
+  const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+  if (!vapidKey) {
+    console.warn("FCM_VAPID_MISSING: falta VITE_FIREBASE_VAPID_KEY");
     return null;
   }
 
+  const messaging = await getFirebaseMessaging();
+  if (!messaging) {
+    console.warn("FCM_NOT_SUPPORTED: messaging no soportado en este entorno.");
+    return null;
+  }
+
+  //  esto asegura que el SW YA está listo y activo
+  const registration = await navigator.serviceWorker.ready;
+
+  await requestNotificationPermission();
+
   try {
-    console.log('FCM_SW_READY_WAIT');
-    const registration = await ensureServiceWorker();
-    if (!registration) return null;
-
-    const permission = await requestNotificationPermission();
-    if (permission !== 'granted') return null;
-
-    console.log('FCM_TOKEN_START');
-    const token = await getToken(messaging as any, {
-      vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-      serviceWorkerRegistration: registration
+    const token = await getToken(messaging, {
+      vapidKey,
+      serviceWorkerRegistration: registration,
     });
 
-    if (token) {
-      console.log('FCM_TOKEN_OK');
-      return token;
+    if (!token) {
+      console.warn("FCM_TOKEN_EMPTY");
+      return null;
     }
 
-    console.warn('FCM_TOKEN_EMPTY');
-    return null;
-  } catch (error) {
-    console.error('FCM_TOKEN_ERROR', error);
+    console.log("FCM_TOKEN_OK");
+    return token;
+  } catch (err) {
+    console.error("FCM_TOKEN_ERROR", err);
     return null;
   }
 };

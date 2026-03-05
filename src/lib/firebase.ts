@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getMessaging, isSupported } from "firebase/messaging";
 
 const firebaseConfig = {
@@ -10,19 +10,11 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-console.log("FIREBASE_INIT_START");
+export const firebaseApp = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
-export const app = initializeApp(firebaseConfig);
-
-// Messaging solo si es soportado (evita crashes)
-export const messaging = await (async () => {
-  try {
-    const ok = await isSupported();
-    if (!ok) return null;
-    return getMessaging(app);
-  } catch {
-    return null;
-  }
-})();
-
-console.log("FIREBASE_INIT_OK");
+// Messaging puede NO estar soportado en preview/iframe → lo manejamos seguro
+export const getFirebaseMessaging = async () => {
+  const supported = await isSupported().catch(() => false);
+  if (!supported) return null;
+  return getMessaging(firebaseApp);
+};
