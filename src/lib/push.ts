@@ -22,33 +22,50 @@ export const requestNotificationPermission = async () => {
   return permission;
 };
 
+
 export const getFcmToken = async () => {
-  // 🔥 en preview embebido suele fallar: mejor no intentar
-  if (isInIframe()) {
-    console.warn("FCM_BLOCKED_IFRAME: Abre la app en una pestaña normal para activar push.");
-    return null;
-  }
-
-  if (!isPushSupported()) return null;
-
   const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
   if (!vapidKey) {
-    console.warn("FCM_VAPID_MISSING: falta VITE_FIREBASE_VAPID_KEY");
+    console.warn("FCM_VAPID_MISSING");
     return null;
   }
 
   const messaging = await getFirebaseMessaging();
   if (!messaging) {
-    console.warn("FCM_NOT_SUPPORTED: messaging no soportado en este entorno.");
+    console.warn("FCM_NOT_SUPPORTED");
     return null;
   }
 
-  //  esto asegura que el SW YA está listo y activo
-  const registration = await navigator.serviceWorker.ready;
+  // ✅ FORZAR a usar la registration del SW de Firebase (scope '/')
+  let registration = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
 
-  await requestNotificationPermission();
+  if (!registration) {
+    console.log("FCM_SW_REGISTER_START", { path: "/firebase-messaging-sw.js" });
+    registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
+    console.log("FCM_SW_REGISTER_OK");
+  } else {
+    console.log("FCM_SW_FOUND");
+  }
+
+  // ✅ Espera a que el SW esté activo
+  if (!registration.active) {
+    await new Promise<void>((resolve) => {
+      const sw = registration!.installing || registration!.waiting;
+      if (!sw) return resolve();
+      sw.addEventListener("statechange", () => {
+        if (sw.state === "activated") resolve();
+      });
+    });
+  }
+
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") {
+    console.warn("FCM_PERMISSION_DENIED");
+    return null;
+  }
 
   try {
+    console.log("FCM_TOKEN_START");
     const token = await getToken(messaging, {
       vapidKey,
       serviceWorkerRegistration: registration,
