@@ -1,4 +1,3 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -15,5 +14,3 @@ root.render(
     <App />
   </React.StrictMode>
 );
-
-// Service Worker registration is handled in src/lib/push.ts

@@ -1,11 +1,10 @@
 {
-  "name": "Endless Love Organizer",
+  "name": "Endless Love",
   "short_name": "Endless Love",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#0F1A2E",
-  "gcm_sender_id": "103953800507",
+  "theme_color": "#000000",
   "icons": [
     {
       "src": "/pwa-192.png",
@@ -17,5 +16,6 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "gcm_sender_id": "103953800507"
 }

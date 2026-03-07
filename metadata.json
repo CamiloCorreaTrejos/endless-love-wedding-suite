@@ -1,7 +1,5 @@
 {
-  "name": "Endless Love - Wedding Organizer",
-  "description": "A comprehensive, elegant wedding planning suite featuring a guest list manager, budget tracker, timeline checklist, and an AI-powered wedding consultant for themes and vendors.",
-  "requestFramePermissions": [
-    
-  ]
+  "name": "Endless Love",
+  "description": "Organizador de bodas con notificaciones push",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"]
 }

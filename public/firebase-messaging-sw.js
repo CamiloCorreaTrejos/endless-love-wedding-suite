@@ -13,11 +13,26 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 messaging.onBackgroundMessage((payload) => {
   const title = payload?.notification?.title || "Endless Love";
   const options = {
     body: payload?.notification?.body || "Tienes una nueva notificación.",
     icon: "/pwa-192.png",
+    badge: "/pwa-192.png",
     data: payload?.data || {},
   };
   self.registration.showNotification(title, options);
