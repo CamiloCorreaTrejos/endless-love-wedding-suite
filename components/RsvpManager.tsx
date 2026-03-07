@@ -33,6 +33,7 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
   const [showClosed, setShowClosed] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const PUBLIC_RSVP_BASE_URL = "https://camiloyvalen.netlify.app";
 
   const fetchData = async () => {
     setLoading(true);
@@ -49,7 +50,7 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
   }, [weddingId]);
 
   const handleCopyLink = (code: string) => {
-    const url = `${window.location.origin}/rsvp/${code}`;
+    const url = `${PUBLIC_RSVP_BASE_URL}/rsvp/${code}`;
     navigator.clipboard.writeText(url);
     // Could add a toast here
   };
