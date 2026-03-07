@@ -60,7 +60,7 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
 
   const availableMembers = useMemo(() => 
     metrics.allGuestMembers.filter(m => 
-      !localTables.some(t => t.assignedGuestIds.includes(m.id)) &&
+      !localTables.some(t => (t.assignedGuestIds || []).includes(m.id)) &&
       m.name.toLowerCase().includes(guestSearch.toLowerCase())
     ), [metrics.allGuestMembers, localTables, guestSearch]);
 
@@ -458,11 +458,11 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
                         <label className="text-[8px] font-bold text-stone-400 uppercase tracking-widest ml-1">Capacidad ({selectedTable.seats})</label>
                         <div className="flex gap-1.5">
                           <button 
-                            onClick={() => { const n = Math.max(1, selectedTable.seats - 1); updateSelectedTable({ seats: n, assignedGuestIds: selectedTable.assignedGuestIds.slice(0, n) }); }}
+                            onClick={() => { const n = Math.max(1, selectedTable.seats - 1); updateSelectedTable({ seats: n, assignedGuestIds: (selectedTable.assignedGuestIds || []).slice(0, n) }); }}
                             className="flex-1 py-2 bg-stone-50 border border-stone-100 rounded-xl text-stone-800 font-bold hover:bg-stone-100 transition-all shadow-sm text-xs"
                           >-</button>
                           <button 
-                            onClick={() => { const n = selectedTable.seats + 1; updateSelectedTable({ seats: n, assignedGuestIds: [...selectedTable.assignedGuestIds, ''] }); }}
+                            onClick={() => { const n = selectedTable.seats + 1; updateSelectedTable({ seats: n, assignedGuestIds: [...(selectedTable.assignedGuestIds || []), ''] }); }}
                             className="flex-1 py-2 bg-stone-50 border border-stone-100 rounded-xl text-stone-800 font-bold hover:bg-stone-100 transition-all shadow-sm text-xs"
                           >+</button>
                         </div>

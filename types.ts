@@ -6,6 +6,7 @@ export interface GuestMember {
   isUnknown?: boolean;
   tableId?: string;
   attending?: boolean;
+  email?: string;
   dietaryRestrictions?: string;
   rsvpNotes?: string;
 }

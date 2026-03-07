@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import { ICONS, COLORS, GUEST_CATEGORIES } from '../constants';
 import { Guest, GuestMember, Table } from '../types';
 import { Modal } from './Modal';
@@ -30,6 +31,7 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
   const [certainty, setCertainty] = useState<'Seguro' | 'Tal vez'>('Seguro');
   const [status, setStatus] = useState<'Pendiente' | 'Invitación Enviada' | 'Cancelado'>('Pendiente');
   const [confirmation, setConfirmation] = useState<'Sí' | 'No'>('No');
+  const [rsvpStatus, setRsvpStatus] = useState<'pendiente' | 'parcial' | 'confirmado' | 'rechazado' | 'cerrado'>('pendiente');
   
   const [members, setMembers] = useState<Partial<GuestMember>[]>([
     { name: '', ageCategory: 'Adulto', isUnknown: false }
@@ -43,6 +45,7 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
     setCertainty('Seguro');
     setStatus('Pendiente');
     setConfirmation('No');
+    setRsvpStatus('pendiente');
     setMembers([{ name: '', ageCategory: 'Adulto', isUnknown: false }]);
   };
 
@@ -58,13 +61,22 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
     setCertainty(guest.certainty);
     setStatus(guest.status as any);
     setConfirmation(guest.confirmation);
+    setRsvpStatus(guest.rsvpStatus || 'pendiente');
     setMembers(guest.members.map(m => ({ ...m })));
     setEntryType(guest.members.length === 1 ? 'Solo' : (guest.members.length === 2 ? 'Pareja' : 'Grupo Familiar'));
     setIsModalOpen(true);
   };
 
   const handleAddMemberField = () => {
-    setMembers([...members, { name: '', ageCategory: 'Adulto', isUnknown: false }]);
+    setMembers([...members, { 
+      name: '', 
+      ageCategory: 'Adulto', 
+      isUnknown: false,
+      attending: undefined,
+      email: '',
+      dietaryRestrictions: '',
+      rsvpNotes: ''
+    }]);
   };
 
   const updateMember = (index: number, updates: Partial<GuestMember>) => {
@@ -79,25 +91,58 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
       id: m.id || Math.random().toString(36).substr(2, 9),
       name: m.isUnknown ? 'Desconocido' : (m.name || 'Invitado'),
       ageCategory: m.ageCategory || 'Adulto',
-      isUnknown: m.isUnknown
+      isUnknown: m.isUnknown,
+      attending: m.attending,
+      tableId: m.tableId,
+      dietaryRestrictions: m.dietaryRestrictions,
+      rsvpNotes: m.rsvpNotes
     }));
 
-    const guestData: Omit<Guest, 'id'> = {
-      groupName: groupName || finalMembers.map(m => m.name).join(' & '),
-      category,
-      members: finalMembers,
-      certainty,
-      status,
-      confirmation,
-      maxGuests: finalMembers.length,
-      rsvpCode: '',
-      rsvpStatus: 'pendiente',
-      rsvpClosed: false
-    };
-
     if (editingGuestId) {
+      const existingGuest = guests.find(g => g.id === editingGuestId);
+      
+      let newRsvpStatus = existingGuest?.rsvpStatus || 'pendiente';
+      const attendingCount = finalMembers.filter(m => m.attending === true).length;
+      const notAttendingCount = finalMembers.filter(m => m.attending === false).length;
+      const totalMembers = finalMembers.length;
+
+      if (existingGuest?.rsvpClosed) {
+        newRsvpStatus = existingGuest.rsvpStatus; // Keep it as is if closed manually
+      } else if (notAttendingCount === totalMembers && totalMembers > 0) {
+        newRsvpStatus = 'rechazado';
+      } else if (attendingCount === totalMembers && totalMembers > 0) {
+        newRsvpStatus = 'confirmado';
+      } else if (attendingCount > 0) {
+        newRsvpStatus = 'parcial';
+      } else {
+        newRsvpStatus = 'pendiente';
+      }
+
+      const guestData: Partial<Guest> = {
+        groupName: groupName || finalMembers.map(m => m.name).join(' & '),
+        category,
+        members: finalMembers,
+        certainty,
+        status,
+        confirmation,
+        maxGuests: finalMembers.length,
+        rsvpStatus: newRsvpStatus,
+        rsvpClosed: existingGuest?.rsvpClosed || false
+      };
       onUpdateGuest(editingGuestId, guestData);
     } else {
+      const guestData: Omit<Guest, 'id'> = {
+        groupName: groupName || finalMembers.map(m => m.name).join(' & '),
+        category,
+        members: finalMembers,
+        certainty,
+        status,
+        confirmation,
+        maxGuests: finalMembers.length,
+        rsvpCode: '',
+        rsvpStatus: rsvpStatus,
+        rsvpClosed: false
+      };
       onAddGuest(guestData);
     }
     setIsModalOpen(false);
@@ -123,9 +168,7 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
   // Calculations for Summary
   const allMembersList = guests.flatMap(inv => inv.members);
   const totalPersonas = allMembersList.length;
-  const confirmadasPersonas = guests
-    .filter(inv => inv.confirmation === 'Sí')
-    .reduce((acc, inv) => acc + inv.members.length, 0);
+  const confirmadasPersonas = allMembersList.filter(m => m.attending === true).length;
   
   const assignedIdsSet = new Set(tables.flatMap(t => t.assignedGuestIds));
   const miembrosSinMesaCount = allMembersList.filter(m => !assignedIdsSet.has(m.id)).length;
@@ -136,12 +179,52 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
   const getAssignedTableNames = (guestMembers: GuestMember[]) => {
     const tableNames = new Set<string>();
     guestMembers.forEach(member => {
-      const assignedTable = tables.find(t => t.assignedGuestIds.includes(member.id));
+      const assignedTable = tables.find(t => (t.assignedGuestIds || []).includes(member.id));
       if (assignedTable) {
         tableNames.add(assignedTable.name);
       }
     });
     return Array.from(tableNames);
+  };
+
+  const exportToExcel = () => {
+    if (guests.length === 0) {
+      alert("No hay datos para exportar");
+      return;
+    }
+
+    try {
+      const exportData = guests.flatMap(guest => 
+        guest.members.map(member => {
+          const assignedTable = tables.find(t => (t.assignedGuestIds || []).includes(member.id));
+          return {
+            'Grupo': guest.groupName || '',
+            'Categoría': guest.category || '',
+            'Código RSVP': guest.rsvpCode || '',
+            'Estado RSVP': guest.rsvpStatus || '',
+            'Cupos Máximos': guest.maxGuests || 0,
+            'Nombre': member.name || '',
+            'Email': member.email || '',
+            'Asiste': member.attending === true ? 'Sí' : member.attending === false ? 'No' : '',
+            'Edad': member.ageCategory || '',
+            'Asignación': assignedTable ? assignedTable.name : '',
+            'Restricciones Alimenticias': member.dietaryRestrictions || '',
+            'Notas RSVP': member.rsvpNotes || '',
+            'Fecha RSVP': guest.rsvpSubmittedAt ? new Date(guest.rsvpSubmittedAt).toLocaleDateString() : '',
+            'Grupo Cerrado': guest.rsvpClosed ? 'Sí' : 'No'
+          };
+        })
+      );
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Confirmaciones');
+      
+      XLSX.writeFile(workbook, 'rsvp-invitados.xlsx');
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+      alert("Hubo un error al exportar los datos.");
+    }
   };
 
   return (
@@ -154,6 +237,12 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <input type="file" ref={fileInputRef} className="hidden" />
+          <button 
+            onClick={exportToExcel}
+            className="w-full sm:w-auto bg-white border border-stone-200 text-stone-500 px-6 py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-stone-50 shadow-sm transition-all uppercase tracking-widest"
+          >
+            Exportar 
+          </button>
           <button className="w-full sm:w-auto bg-white border border-stone-200 text-stone-500 px-6 py-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-stone-50 shadow-sm transition-all uppercase tracking-widest">
             {ICONS.Upload} Importar CSV
           </button>
@@ -281,12 +370,21 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
                     </td>
                     <td className="px-4 py-4 text-center">
                       <select 
-                        value={inv.confirmation} 
-                        onChange={(e) => onUpdateGuest(inv.id, { confirmation: e.target.value as any })}
-                        className={`text-[9px] font-bold uppercase rounded-xl px-3 py-1.5 outline-none border transition-all cursor-pointer ${inv.confirmation === 'Sí' ? 'bg-[#C6A75E] text-white border-[#C6A75E] shadow-sm' : 'bg-stone-50 text-stone-400 border-stone-100'}`}
+                        value={inv.rsvpStatus} 
+                        onChange={(e) => onUpdateGuest(inv.id, { rsvpStatus: e.target.value as any })}
+                        className={`text-[9px] font-bold uppercase rounded-xl px-3 py-1.5 outline-none border transition-all cursor-pointer ${
+                          inv.rsvpStatus === 'confirmado' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm' : 
+                          inv.rsvpStatus === 'parcial' ? 'bg-amber-50 text-amber-700 border-amber-100 shadow-sm' :
+                          inv.rsvpStatus === 'rechazado' ? 'bg-rose-50 text-rose-700 border-rose-100 shadow-sm' :
+                          inv.rsvpStatus === 'cerrado' ? 'bg-stone-200 text-stone-600 border-stone-300 shadow-sm' :
+                          'bg-stone-50 text-stone-400 border-stone-100'
+                        }`}
                       >
-                        <option value="No">Pendiente</option>
-                        <option value="Sí">Confirmado</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="parcial">Parcial</option>
+                        <option value="confirmado">Confirmado</option>
+                        <option value="rechazado">Rechazado</option>
+                        <option value="cerrado">Cerrado</option>
                       </select>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -373,12 +471,12 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
           <div className="space-y-4">
             <div className="flex items-center justify-between px-1">
               <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Integrantes del grupo</label>
-              {entryType === 'Grupo Familiar' && (
+              {(entryType === 'Grupo Familiar' || editingGuestId) && (
                 <button 
                   type="button" onClick={handleAddMemberField}
                   className="text-[10px] font-bold text-[#C6A75E] uppercase flex items-center gap-1 hover:text-[#0F1A2E] transition-colors"
                 >
-                  <Plus size={12} /> Añadir miembro
+                  <Plus size={12} /> Añadir integrante
                 </button>
               )}
             </div>
@@ -406,8 +504,9 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="md:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                  <div className="md:col-span-6">
+                    <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1 mb-1 block">Nombre</label>
                     <input 
                       type="text" value={m.name} disabled={m.isUnknown}
                       onChange={e => updateMember(idx, { name: e.target.value })}
@@ -415,13 +514,31 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
                       className="w-full px-5 py-4 bg-white border border-stone-100 rounded-2xl outline-none focus:border-[#C6A75E] text-sm text-stone-800 placeholder-stone-400 disabled:bg-stone-100 disabled:text-stone-300 font-semibold"
                     />
                   </div>
-                  <select 
-                    value={m.ageCategory} onChange={e => updateMember(idx, { ageCategory: e.target.value as any })}
-                    className="w-full px-4 py-3 bg-white border border-stone-100 rounded-2xl outline-none focus:border-[#C6A75E] text-sm text-stone-800 font-bold"
-                  >
-                    <option value="Adulto">Adulto</option>
-                    <option value="Niño">Niño</option>
-                  </select>
+                  <div className="md:col-span-3">
+                    <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1 mb-1 block">Edad</label>
+                    <select 
+                      value={m.ageCategory} onChange={e => updateMember(idx, { ageCategory: e.target.value as any })}
+                      className="w-full px-4 py-4 bg-white border border-stone-100 rounded-2xl outline-none focus:border-[#C6A75E] text-sm text-stone-800 font-bold"
+                    >
+                      <option value="Adulto">Adulto</option>
+                      <option value="Niño">Niño</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1 mb-1 block">Asiste</label>
+                    <select 
+                      value={m.attending === true ? "true" : m.attending === false ? "false" : ""} 
+                      onChange={e => {
+                        const val = e.target.value;
+                        updateMember(idx, { attending: val === "true" ? true : val === "false" ? false : null });
+                      }}
+                      className="w-full px-4 py-4 bg-white border border-stone-100 rounded-2xl outline-none focus:border-[#C6A75E] text-sm text-stone-800 font-bold"
+                    >
+                      <option value="">Seleccionar</option>
+                      <option value="true">Sí</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             ))}
@@ -450,13 +567,16 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">Confirmación</label>
+              <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">RSVP</label>
               <select 
-                value={confirmation} onChange={e => setConfirmation(e.target.value as any)}
+                value={rsvpStatus} onChange={e => setRsvpStatus(e.target.value as any)}
                 className="w-full px-4 py-4 bg-stone-50 border border-stone-100 rounded-2xl text-[10px] font-bold uppercase text-stone-800 outline-none focus:border-[#C6A75E] focus:bg-white"
               >
-                <option value="No">No</option>
-                <option value="Sí">Sí</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="parcial">Parcial</option>
+                <option value="confirmado">Confirmado</option>
+                <option value="rechazado">Rechazado</option>
+                <option value="cerrado">Cerrado</option>
               </select>
             </div>
           </div>

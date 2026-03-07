@@ -15,6 +15,7 @@ export const mapGuestMemberRowToUI = (row: any): GuestMember => ({
   isUnknown: row.is_unknown ?? false,
   tableId: row.table_id ?? undefined,
   attending: row.attending ?? undefined,
+  email: row.email ?? '',
   dietaryRestrictions: row.dietary_restrictions ?? '',
   rsvpNotes: row.rsvp_notes ?? '',
 });
@@ -110,7 +111,12 @@ export const mapGuestUIToUpdatePatch = (updates: Partial<Guest>) => {
   if (updates.confirmation !== undefined) patch.confirmation = normalizeValue(updates.confirmation);
   if (updates.dietary !== undefined) patch.dietary_notes = normalizeValue(updates.dietary);
   if (updates.maxGuests !== undefined) patch.max_guests = updates.maxGuests;
-  if (updates.rsvpCode !== undefined) patch.rsvp_code = normalizeValue(updates.rsvpCode);
+  
+  // Protect rsvp_code: only map if explicitly provided and valid
+  if (updates.rsvpCode !== undefined && updates.rsvpCode !== null && updates.rsvpCode !== '') {
+    patch.rsvp_code = updates.rsvpCode;
+  }
+  
   if (updates.rsvpStatus !== undefined) patch.rsvp_status = updates.rsvpStatus;
   if (updates.rsvpClosed !== undefined) patch.rsvp_closed = updates.rsvpClosed;
   if (updates.rsvpSubmittedAt !== undefined) patch.rsvp_submitted_at = updates.rsvpSubmittedAt;
@@ -124,6 +130,7 @@ export const mapGuestMemberUIToInsertPayload = (member: Omit<GuestMember, 'id'>,
   is_unknown: member.isUnknown ?? false,
   table_id: normalizeValue(member.tableId),
   attending: member.attending ?? null,
+  email: normalizeValue(member.email),
   dietary_restrictions: normalizeValue(member.dietaryRestrictions),
   rsvp_notes: normalizeValue(member.rsvpNotes),
 });
@@ -308,6 +315,11 @@ export const updateGuest = async (guestId: string, updates: Partial<Guest>, wedd
   try {
     const { members, ...guestData } = updates;
     const patch = mapGuestUIToUpdatePatch(guestData);
+    console.log("UPDATE_GUEST_PAYLOAD", { patch });
+
+    if (patch.rsvp_code === undefined) {
+      console.log("UPDATE_GUEST_RSVP_CODE_PRESERVED");
+    }
 
     if (Object.keys(patch).length > 0) {
       const { error } = await supabase!
@@ -316,9 +328,12 @@ export const updateGuest = async (guestId: string, updates: Partial<Guest>, wedd
         .eq('id', guestId)
         .eq('wedding_id', weddingId);
       if (error) throw error;
+      if (patch.max_guests !== undefined) console.log("UPDATE_GUEST_MAX_GUESTS_OK");
+      if (patch.rsvp_status !== undefined) console.log("UPDATE_GUEST_RSVP_STATUS_OK");
     }
 
     if (members) {
+      console.log("UPDATE_GUEST_MEMBERS_SYNC_START");
       // 1. Fetch current members to identify what to delete
       const { data: currentMembers, error: fetchError } = await supabase!
         .from('guest_members')
@@ -339,9 +354,11 @@ export const updateGuest = async (guestId: string, updates: Partial<Guest>, wedd
           .in('id', toDelete)
           .eq('guest_id', guestId);
         if (deleteError) throw deleteError;
+        console.log("UPDATE_GUEST_MEMBERS_DELETE_OK");
       }
 
       // 3. Upsert incoming members
+      let inserted = false;
       for (const m of members) {
         const isNew = !m.id || m.id.length < 10; // Simple check for temporary IDs
         const mPayload = mapGuestMemberUIToInsertPayload(m as any, guestId);
@@ -351,6 +368,7 @@ export const updateGuest = async (guestId: string, updates: Partial<Guest>, wedd
             .from('guest_members')
             .insert(mPayload);
           if (insertError) throw insertError;
+          inserted = true;
         } else {
           const { error: updateError } = await supabase!
             .from('guest_members')
@@ -360,6 +378,7 @@ export const updateGuest = async (guestId: string, updates: Partial<Guest>, wedd
               is_unknown: mPayload.is_unknown,
               table_id: mPayload.table_id,
               attending: mPayload.attending,
+              email: mPayload.email,
               dietary_restrictions: mPayload.dietary_restrictions,
               rsvp_notes: mPayload.rsvp_notes
             })
@@ -368,6 +387,7 @@ export const updateGuest = async (guestId: string, updates: Partial<Guest>, wedd
           if (updateError) throw updateError;
         }
       }
+      if (inserted) console.log("UPDATE_GUEST_MEMBERS_INSERT_OK");
     }
 
     console.log("UPDATE_GUEST_OK");
@@ -829,7 +849,7 @@ export const getRsvpDashboardByWedding = async (weddingId: string) => {
   try {
     const { data: guests, error: guestsError } = await supabase!
       .from('guests')
-      .select('id, group_name, category, max_guests, rsvp_code, rsvp_status, rsvp_closed, rsvp_submitted_at, guest_members(id, guest_id, name, attending, dietary_restrictions)')
+      .select('id, group_name, category, max_guests, rsvp_code, rsvp_status, rsvp_closed, rsvp_submitted_at, guest_members(id, guest_id, name, attending, email, dietary_restrictions)')
       .eq('wedding_id', weddingId);
     
     if (guestsError) throw guestsError;

@@ -100,8 +100,10 @@ const AppContent: React.FC = () => {
     if (!weddingId) return;
     setActionError(null);
     try {
+      console.log("UPDATE_GUEST_START", { id, updates });
       const { error } = await updateGuest(id, updates as any, weddingId);
       if (error) throw error;
+      console.log("UPDATE_GUEST_OK", { id });
       await refetchAll(weddingId);
     } catch (error) {
       console.error("UPDATE_GUEST_ERROR", error);
@@ -298,7 +300,7 @@ const AppContent: React.FC = () => {
       case 'dashboard': return <Dashboard data={weddingData} />;
       case 'guests': return <GuestList guests={weddingData.guests} tables={weddingData.tables} onAddGuest={handleAddGuest} onRemoveGuest={handleRemoveGuest} onUpdateGuest={handleUpdateGuest} />;
       case 'seating': return <SeatingPlanner tables={weddingData.tables} guests={weddingData.guests} onUpdateTable={handleUpdateTable} onAddTable={handleAddTable} onRemoveTable={handleRemoveTable} onAssignGuest={handleAssignGuestToTable} />;
-      case 'rsvp': return <RsvpManager weddingId={weddingId} />;
+      case 'rsvp': return weddingId ? <RsvpManager weddingId={weddingId} /> : null;
       case 'vendors': return <VendorManager vendors={weddingData.vendors} onAddVendor={handleAddVendor} onUpdateVendor={handleUpdateVendor} onRemoveVendor={handleRemoveVendor} />;
       case 'budget': return <BudgetTracker expenses={weddingData.expenses} totalBudget={weddingData.budget} onAddExpense={handleAddExpense} onUpdateBudget={handleUpdateBudget} onRemoveExpense={handleRemoveExpense} />;
       case 'tasks': return <TaskList tasks={weddingData.tasks} onToggleTask={handleToggleTask} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onRemoveTask={handleRemoveTask} />;
