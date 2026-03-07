@@ -10,7 +10,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        serif: ['Playfair Display', 'sans-serif'],
+        serif: ['Montserrat', 'sans-serif'],
         sans: ['Montserrat', 'sans-serif'],
       }
     },
