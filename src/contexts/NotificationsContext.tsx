@@ -37,7 +37,11 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [notifications]);
 
   const refetch = useCallback(async (weddingId: string, userId?: string) => {
-    if (!weddingId) return;
+    if (!weddingId || weddingId === '00000000-0000-0000-0000-000000000000') {
+      console.warn("MODULE_BLOCKED_NO_WEDDING_ID");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data, error } = await getNotificationsByWedding(weddingId, userId);
     if (error) {

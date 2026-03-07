@@ -1115,9 +1115,14 @@ export const getWeddingById = async (weddingId: string) => {
       .from('weddings')
       .select('id, partner1_name, partner2_name, wedding_date, total_budget, cover_image_url')
       .eq('id', weddingId)
-      .single();
+      .maybeSingle();
     
     if (error) throw error;
+    
+    if (!data) {
+      console.warn("GET_WEDDING_NOT_FOUND", { weddingId });
+      return { data: null, error: null };
+    }
     
     console.log("GET_WEDDING_OK", { 
       id: data.id, 

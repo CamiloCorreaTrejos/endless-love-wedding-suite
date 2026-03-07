@@ -21,7 +21,7 @@ interface WeddingDataContextType {
 
 const WeddingDataContext = createContext<WeddingDataContextType | undefined>(undefined);
 
-export const WeddingDataProvider: React.FC<{ children: React.ReactNode, weddingId: string | null }> = ({ children, weddingId }) => {
+export const WeddingDataProvider: React.FC<{ children: React.ReactNode, weddingId: string | null, profileLoading?: boolean }> = ({ children, weddingId, profileLoading }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [weddingData, setWeddingData] = useState<WeddingData>({
@@ -37,7 +37,11 @@ export const WeddingDataProvider: React.FC<{ children: React.ReactNode, weddingI
   });
 
   const refetchAll = useCallback(async (id: string) => {
-    if (!id) return;
+    if (!id || id === '00000000-0000-0000-0000-000000000000') {
+      console.warn("MODULE_BLOCKED_NO_WEDDING_ID");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     console.log("WEDDING_DATA_REFRESH_START", { weddingId: id });
@@ -76,10 +80,10 @@ export const WeddingDataProvider: React.FC<{ children: React.ReactNode, weddingI
   }, []);
 
   useEffect(() => {
-    if (weddingId) {
+    if (weddingId && !profileLoading) {
       refetchAll(weddingId);
     }
-  }, [weddingId, refetchAll]);
+  }, [weddingId, refetchAll, profileLoading]);
 
   return (
     <WeddingDataContext.Provider value={{ weddingData, loading, error, refetchAll, setWeddingData }}>

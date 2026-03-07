@@ -9,8 +9,11 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   loading: boolean;
   authError: string | null;
+  profileLoading: boolean;
+  profileWarning: string | null;
   signOut: () => Promise<void>;
   retryBootstrap: () => void;
+  retryProfile: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,74 +25,113 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileWarning, setProfileWarning] = useState<string | null>(null);
+  const [profileRetryCount, setProfileRetryCount] = useState(0);
+
   const bootstrappedRef = useRef(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const loadingRef = useRef(true);
+  const profileRequestRef = useRef<Promise<any> | null>(null);
+  const lastProfileLoadedUserIdRef = useRef<string | null>(null);
+  const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    loadingRef.current = loading;
-  }, [loading]);
+  const loadProfile = async (userId: string, email: string, isInitialBootstrap: boolean = false) => {
+    if (profileRequestRef.current) {
+      return profileRequestRef.current;
+    }
 
-  const loadProfile = async (userId: string, email: string) => {
-    console.log('AUTH_PROFILE_START', userId);
-    
-    // Safety timeout for profile load: 6 seconds
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Profile load timeout')), 6000)
-    );
+    console.log('AUTH_PROFILE_QUERY_START', userId);
+    setProfileLoading(true);
 
-    try {
-      console.log('AUTH_PROFILE_QUERY_INIT');
-      const fetchPromise = supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+    const promise = (async () => {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile load timeout')), 8000)
+      );
 
-      console.log('AUTH_PROFILE_AWAITING_RES');
-      const { data: profile, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
-      console.log('AUTH_PROFILE_RES_RECEIVED', { hasData: !!profile, hasError: !!error });
-
-      if (error) {
-        console.error('AUTH_PROFILE_ERROR (Fetch):', error);
-        throw error;
-      }
-
-      if (!profile) {
-        console.log('AUTH_PROFILE_NOT_FOUND, creating...');
-        const { data: newProfile, error: insertError } = await supabase
+      try {
+        const fetchPromise = supabase
           .from('profiles')
-          .insert({ id: userId, email, role: 'admin', full_name: '' })
-          .select()
-          .single();
-        
-        if (insertError) {
-          console.error('AUTH_PROFILE_ERROR (Insert):', insertError);
-          throw insertError;
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+
+        const { data: profile, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
+        if (error) {
+          console.error('AUTH_PROFILE_ERROR (Fetch):', error);
+          throw error;
         }
-        console.log('AUTH_PROFILE_CREATED', newProfile?.id);
-        setUserProfile(newProfile as UserProfile);
-        return newProfile as UserProfile;
+
+        if (!profile) {
+          console.log('AUTH_PROFILE_NOT_FOUND, creating...');
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert({ id: userId, email, role: 'admin', full_name: '' })
+            .select()
+            .single();
+          
+          if (insertError) {
+            console.error('AUTH_PROFILE_ERROR (Insert):', insertError);
+            throw insertError;
+          }
+          console.log('AUTH_PROFILE_OK (Created)', newProfile?.id);
+          setUserProfile(newProfile as UserProfile);
+          lastProfileLoadedUserIdRef.current = userId;
+          setProfileWarning(null);
+          setProfileRetryCount(0);
+          return newProfile as UserProfile;
+        }
+        
+        console.log('AUTH_PROFILE_OK', profile?.id);
+        setUserProfile(profile as UserProfile);
+        lastProfileLoadedUserIdRef.current = userId;
+        setProfileWarning(null);
+        setProfileRetryCount(0);
+        return profile as UserProfile;
+      } catch (err: any) {
+        if (err.message === 'Profile load timeout') {
+          console.error('AUTH_PROFILE_TIMEOUT');
+        } else {
+          console.error('AUTH_PROFILE_ERROR:', err);
+        }
+
+        if (isInitialBootstrap && !userProfile) {
+          console.error('AUTH_FATAL_PROFILE_ERROR');
+          setAuthError("No se pudo cargar el perfil. Por favor, recarga la página.");
+        } else {
+          console.warn('AUTH_PROFILE_NON_FATAL_ERROR');
+          console.log('AUTH_SESSION_STILL_VALID');
+          setProfileWarning("Estamos reintentando sincronizar tu perfil...");
+        }
+        throw err;
+      } finally {
+        profileRequestRef.current = null;
+        setProfileLoading(false);
       }
-      
-      console.log('AUTH_PROFILE_OK', profile?.id);
-      setUserProfile(profile as UserProfile);
-      return profile as UserProfile;
+    })();
+
+    profileRequestRef.current = promise;
+    return promise;
+  };
+
+  const refreshProfileSilently = async (userId: string, email: string, retryCount = 0) => {
+    try {
+      await loadProfile(userId, email, false);
     } catch (err) {
-      console.error('AUTH_PROFILE_ERROR (Critical):', err);
-      
-      // Resilient Fallback
-      const fallbackProfile: UserProfile = {
-        id: userId,
-        email: email,
-        role: 'admin',
-        full_name: 'Usuario (Modo Resiliente)',
-        wedding_id: '00000000-0000-0000-0000-000000000000'
-      };
-      
-      console.warn('AUTH_PROFILE_FALLBACK_USED');
-      setUserProfile(fallbackProfile);
-      return fallbackProfile;
+      if (retryCount < 3) {
+        const delays = [2000, 5000, 10000];
+        const delay = delays[retryCount];
+        console.log('AUTH_PROFILE_RETRY_SCHEDULED', { delay, retryCount: retryCount + 1 });
+        
+        if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+        
+        retryTimerRef.current = setTimeout(() => {
+          console.log('AUTH_PROFILE_RETRY_START', { retryCount: retryCount + 1 });
+          setProfileRetryCount(retryCount + 1);
+          refreshProfileSilently(userId, email, retryCount + 1);
+        }, delay);
+      } else {
+        console.log('AUTH_PROFILE_NON_FATAL_ERROR: Max retries reached');
+      }
     }
   };
 
@@ -100,19 +142,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('AUTH_BOOT_START');
     setLoading(true);
     setAuthError(null);
-
-    // Safety timeout: 10 seconds
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      if (loadingRef.current) {
-        console.warn('AUTH_BOOT_TIMEOUT - Forcing loading end');
-        setLoading(false);
-        // If we timed out but have a user, we might still be able to show something
-        if (!authUser) {
-          setAuthError("La conexión está tardando más de lo esperado. Por favor, recarga o intenta más tarde.");
-        }
-      }
-    }, 10000);
 
     try {
       const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
@@ -126,7 +155,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('AUTH_BOOT_SESSION_OK', initialSession.user.id);
         setSession(initialSession);
         setAuthUser(initialSession.user);
-        await loadProfile(initialSession.user.id, initialSession.user.email || '');
+        try {
+          await loadProfile(initialSession.user.id, initialSession.user.email || '', true);
+        } catch (e) {
+          // Error handled inside loadProfile
+        }
       } else {
         console.log('AUTH_BOOT_NO_SESSION');
         setSession(null);
@@ -136,10 +169,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error('AUTH_BOOT_CRITICAL_ERROR', err);
       setAuthError("Error crítico al iniciar sesión.");
+      setUserProfile(null);
     } finally {
       console.log('AUTH_LOADING_END');
       setLoading(false);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     }
   };
 
@@ -154,31 +187,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (currentSession?.user) {
         setAuthUser(currentSession.user);
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-          await loadProfile(currentSession.user.id, currentSession.user.email || '');
+          if (lastProfileLoadedUserIdRef.current !== currentSession.user.id || event === 'TOKEN_REFRESHED') {
+            refreshProfileSilently(currentSession.user.id, currentSession.user.email || '', 0);
+          }
         }
       } else {
         setAuthUser(null);
         setUserProfile(null);
+        lastProfileLoadedUserIdRef.current = null;
         if (event === 'SIGNED_OUT') {
           setLoading(false);
         }
       }
     });
 
-    // Cross-tab sync
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key && e.key.includes('endless-love-auth')) {
-        console.log('AUTH_STORAGE_SYNC_TRIGGERED');
-        bootstrappedRef.current = false;
-        bootstrap();
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-
     return () => {
       subscription.unsubscribe();
-      window.removeEventListener('storage', handleStorageChange);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     };
   }, []);
 
@@ -191,8 +216,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     bootstrap();
   };
 
+  const retryProfile = () => {
+    if (authUser) {
+      refreshProfileSilently(authUser.id, authUser.email || '', 0);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ authUser, session, userProfile, loading, authError, signOut, retryBootstrap }}>
+    <AuthContext.Provider value={{ 
+      authUser, session, userProfile, loading, authError, 
+      profileLoading, profileWarning, signOut, retryBootstrap, retryProfile 
+    }}>
       {children}
     </AuthContext.Provider>
   );
