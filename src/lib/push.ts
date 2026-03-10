@@ -81,7 +81,6 @@ export const requestNotificationPermission = async () => {
     return null;
   }
 };*/
-
 export const getFcmToken = async () => {
   try {
     const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
@@ -104,35 +103,42 @@ export const getFcmToken = async () => {
 
     console.log("FCM_TOKEN_FLOW_START");
 
-    // ✅ Buscar el SW de Firebase específicamente, no el de "/"
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    let registration = registrations.find(r =>
-      r.active?.scriptURL?.includes("firebase-messaging-sw.js") ||
-      r.installing?.scriptURL?.includes("firebase-messaging-sw.js") ||
-      r.waiting?.scriptURL?.includes("firebase-messaging-sw.js")
-    );
-
-    // ✅ Solo registrar si no existe ninguno
-    if (!registration) {
-      registration = await navigator.serviceWorker.register(
-        "/firebase-messaging-sw.js",
-        { scope: "/firebase-cloud-messaging-push-scope", updateViaCache: "none" }
-      );
+    // ✅ Limpiar registros previos para evitar TOO_MANY_REGISTRATIONS
+    const existingRegs = await navigator.serviceWorker.getRegistrations();
+    for (const r of existingRegs) {
+      if (!r.active?.scriptURL?.includes("firebase-messaging-sw.js")) {
+        await r.unregister();
+      }
     }
 
-    // ✅ Esperar a que esté activo correctamente
-    await new Promise<void>((resolve) => {
-      if (registration!.active) {
-        resolve();
-        return;
-      }
-      const sw = registration!.installing || registration!.waiting;
-      sw?.addEventListener("statechange", (e: any) => {
-        if (e.target.state === "activated") resolve();
-      });
-    });
+    // ✅ Registrar SW siempre fresco
+    const registration = await navigator.serviceWorker.register(
+      "/firebase-messaging-sw.js",
+      { scope: "/", updateViaCache: "none" }
+    );
 
-    await navigator.serviceWorker.ready;
+    // ✅ Espera activo con timeout — sin quedarse colgado
+    await Promise.race([
+      new Promise<void>((resolve) => {
+        if (registration.active) {
+          resolve();
+          return;
+        }
+        const sw = registration.installing ?? registration.waiting;
+        if (!sw) { resolve(); return; }
+        sw.addEventListener("statechange", function handler(e: any) {
+          if (e.target.state === "activated") {
+            sw.removeEventListener("statechange", handler);
+            resolve();
+          }
+        });
+      }),
+      // ✅ Si en 4 segundos no activa, continúa de todas formas
+      new Promise<void>((resolve) => setTimeout(resolve, 4000))
+    ]);
+
+    // ✅ Pausa corta para estabilizar
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     console.log("FCM_TOKEN_START");
 
