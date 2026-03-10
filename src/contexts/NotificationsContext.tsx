@@ -1,7 +1,7 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { NotificationItem } from '../../types';
-import { getNotificationsByWedding, markNotificationRead, markAllNotificationsRead } from '../../services/supabase';
+import { getNotificationsByWedding, markNotificationRead, markAllNotificationsRead, supabase } from '../../services/supabase';
 
 interface Toast {
   id: string;
@@ -22,28 +22,28 @@ interface NotificationsContextType {
 
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
-export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const NotificationsProvider: React.FC<{ children: React.ReactNode, weddingId: string | null, userId: string | null }> = ({ children, weddingId, userId }) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const notificationsRef = React.useRef<NotificationItem[]>([]);
+  const notificationsRef = useRef<NotificationItem[]>([]);
   
   useEffect(() => {
     notificationsRef.current = notifications;
   }, [notifications]);
 
-  const refetch = useCallback(async (weddingId: string, userId?: string) => {
-    if (!weddingId || weddingId === '00000000-0000-0000-0000-000000000000') {
+  const refetch = useCallback(async (id: string, uid?: string) => {
+    if (!id || id === '00000000-0000-0000-0000-000000000000') {
       console.warn("MODULE_BLOCKED_NO_WEDDING_ID");
       setLoading(false);
       return;
     }
-    setLoading(true);
-    const { data, error } = await getNotificationsByWedding(weddingId, userId);
+    setLoading(prev => notificationsRef.current.length === 0 ? true : prev);
+    const { data, error } = await getNotificationsByWedding(id, uid);
     if (error) {
       setError(error.message);
     } else if (data) {
@@ -65,6 +65,58 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     setLoading(false);
   }, []);
+
+  const refetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const debouncedRefetch = useCallback((id: string, uid?: string) => {
+    if (refetchTimeoutRef.current) {
+      clearTimeout(refetchTimeoutRef.current);
+      console.log(`REALTIME_REFETCH_SKIPPED (notifications)`);
+    }
+    refetchTimeoutRef.current = setTimeout(() => {
+      console.log(`REALTIME_REFETCH_TRIGGERED (notifications)`);
+      refetch(id, uid);
+    }, 1000);
+  }, [refetch]);
+
+  useEffect(() => {
+    if (!weddingId || weddingId === '00000000-0000-0000-0000-000000000000' || !supabase) return;
+
+    console.log("REALTIME_SUBSCRIBE_START", { weddingId, module: 'notifications' });
+
+    const channel = supabase!.channel(`notifications_${weddingId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `wedding_id=eq.${weddingId}` },
+        (payload) => {
+          console.log("NOTIFS_REALTIME_EVENT", payload);
+          debouncedRefetch(weddingId, userId || undefined);
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log("REALTIME_SUBSCRIBE_OK", { module: 'notifications' });
+        } else if (status === 'CLOSED') {
+          console.log("REALTIME_UNSUBSCRIBE", { module: 'notifications' });
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error("REALTIME_ERROR", { module: 'notifications' });
+        }
+      });
+
+    return () => {
+      console.log("REALTIME_UNSUBSCRIBE_START", { module: 'notifications' });
+      supabase!.removeChannel(channel);
+      if (refetchTimeoutRef.current) {
+        clearTimeout(refetchTimeoutRef.current);
+      }
+    };
+  }, [weddingId, userId, debouncedRefetch]);
+
+  useEffect(() => {
+    if (weddingId) {
+      refetch(weddingId, userId || undefined);
+    }
+  }, [weddingId, userId, refetch]);
 
   const markRead = async (id: string, weddingId: string) => {
     const { error } = await markNotificationRead(id, weddingId);

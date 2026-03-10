@@ -37,12 +37,11 @@ import {
 } from './services/supabase';
 import { AuthProvider, useAuth } from './src/lib/AuthContext';
 import { WeddingDataProvider, useWeddingData } from './src/lib/WeddingDataContext';
-import { NotificationsProvider, useNotifications } from './src/contexts/NotificationsContext';
+import { NotificationsProvider } from './src/contexts/NotificationsContext';
 
 const AppContent: React.FC = () => {
   const { authUser, session, userProfile, loading: authLoading, authError, profileLoading, profileWarning, signOut, retryBootstrap, retryProfile } = useAuth();
   const { weddingData, loading: dataLoading, error: dataError, refetchAll, setWeddingData } = useWeddingData();
-  const { refetch: refetchNotifs } = useNotifications();
   const [activeTab, setActiveTab] = useState(() => {
     if (window.location.pathname === '/notificaciones') return 'notifications';
     return 'dashboard';
@@ -67,16 +66,7 @@ const AppContent: React.FC = () => {
     return <PublicRsvp code={rsvpCode} />;
   }
 
-  // --- Notifications Polling ---
-  useEffect(() => {
-    if (weddingId && !profileLoading) {
-      refetchNotifs(weddingId, userProfile?.id);
-      const interval = setInterval(() => {
-        refetchNotifs(weddingId, userProfile?.id);
-      }, 30000); // Poll every 30 seconds
-      return () => clearInterval(interval);
-    }
-  }, [weddingId, userProfile?.id, refetchNotifs, profileLoading]);
+  // --- Notifications Realtime is handled in NotificationsContext ---
 
   // --- Auto-check for Notifications ---
   useEffect(() => {
@@ -507,9 +497,7 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <NotificationsProvider>
-        <AuthContextConsumer />
-      </NotificationsProvider>
+      <AuthContextConsumer />
     </AuthProvider>
   );
 };
@@ -517,9 +505,11 @@ const App: React.FC = () => {
 const AuthContextConsumer: React.FC = () => {
   const { userProfile, profileLoading } = useAuth();
   return (
-    <WeddingDataProvider weddingId={userProfile?.wedding_id || null} profileLoading={profileLoading}>
-      <AppContent />
-    </WeddingDataProvider>
+    <NotificationsProvider weddingId={userProfile?.wedding_id || null} userId={userProfile?.id || null}>
+      <WeddingDataProvider weddingId={userProfile?.wedding_id || null} profileLoading={profileLoading}>
+        <AppContent />
+      </WeddingDataProvider>
+    </NotificationsProvider>
   );
 };
 
