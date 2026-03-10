@@ -104,7 +104,7 @@ export interface NotificationItem {
   userId: string | null;
   title: string;
   message: string;
-  type: 'task_due' | 'vendor_due' | 'budget_alert' | 'general';
+  type: 'task_due' | 'task_overdue' | 'vendor_due' | 'vendor_overdue' | 'budget_alert' | 'general' | 'rsvp_update' | string;
   severity: 'info' | 'warning' | 'urgent';
   link: string | null;
   isRead: boolean;

@@ -1,4 +1,5 @@
 
+import { createAndDispatchNotification } from './notifications';
 import { supabase } from "../src/lib/supabaseClient";
 import { Guest, Table, BudgetItem, Task, Vendor, GuestMember, NotificationItem } from "../types";
 
@@ -747,8 +748,21 @@ export const createTask = async (task: Omit<Task, 'id'>, weddingId: string) => {
   console.log("CREATE_TASK_START", { weddingId, payload: task });
   const payload = mapTaskUIToInsertPayload(task, weddingId);
   const { data, error } = await supabase!.from('tasks').insert([payload]).select().single();
-  if (error) console.error("CREATE_TASK_ERROR", error);
-  else console.log("CREATE_TASK_OK", { id: data.id });
+  if (error) {
+    console.error("CREATE_TASK_ERROR", error);
+  } else {
+    console.log("CREATE_TASK_OK", { id: data.id });
+    console.log("TASK_NOTIFICATION_START");
+    await createAndDispatchNotification(
+      weddingId,
+      null,
+      'general',
+      'Nueva tarea creada',
+      `Se creó la tarea: ${task.title}`,
+      'info',
+      '/tareas'
+    );
+  }
   return { data, error };
 };
 
@@ -758,8 +772,27 @@ export const updateTask = async (taskId: string, updates: Partial<Task>, wedding
   console.log("UPDATE_TASK_START", { taskId, weddingId, updates });
   const patch = mapTaskUIToUpdatePatch(updates);
   const { error } = await supabase!.from('tasks').update(patch).eq('id', taskId).eq('wedding_id', weddingId);
-  if (error) console.error("UPDATE_TASK_ERROR", error);
-  else console.log("UPDATE_TASK_OK");
+  if (error) {
+    console.error("UPDATE_TASK_ERROR", error);
+  } else {
+    console.log("UPDATE_TASK_OK");
+    if (updates.completed === true) {
+      // Fetch task title for notification
+      const { data: taskData } = await supabase!.from('tasks').select('title').eq('id', taskId).single();
+      if (taskData) {
+        console.log("TASK_NOTIFICATION_START");
+        await createAndDispatchNotification(
+          weddingId,
+          null,
+          'general',
+          'Tarea completada',
+          `La tarea "${taskData.title}" fue completada`,
+          'info',
+          '/tareas'
+        );
+      }
+    }
+  }
   return { error };
 };
 
@@ -920,6 +953,13 @@ export const submitRsvpResponse = async (guestId: string, members: any[], rsvpSt
   checkSupabase();
   console.log("SUBMIT_RSVP_START", { guestId, rsvpStatus });
   try {
+    // Fetch guest info for notification
+    const { data: guestInfo } = await supabase!
+      .from('guests')
+      .select('wedding_id, group_name')
+      .eq('id', guestId)
+      .single();
+
     // 1. Update guest status and timestamp
     const { error: guestError } = await supabase!
       .from('guests')
@@ -944,6 +984,28 @@ export const submitRsvpResponse = async (guestId: string, members: any[], rsvpSt
         .eq('guest_id', guestId);
       
       if (memberError) throw memberError;
+    }
+
+    // 3. Create Notification
+    if (guestInfo && guestInfo.wedding_id && rsvpStatus !== 'pendiente') {
+      const severity = rsvpStatus === 'confirmado' ? 'info' : 'warning';
+      let statusText = 'respondió parcialmente';
+      if (rsvpStatus === 'confirmado') statusText = 'confirmó su asistencia';
+      if (rsvpStatus === 'rechazado') statusText = 'indicó que no asistirá';
+
+      const title = 'Nueva confirmación RSVP';
+      const message = `${guestInfo.group_name || 'Un invitado'} ${statusText}`;
+
+      console.log("RSVP_NOTIFICATION_START");
+      await createAndDispatchNotification(
+        guestInfo.wedding_id,
+        null,
+        'rsvp_update',
+        title,
+        message,
+        severity,
+        '/confirmaciones'
+      );
     }
 
     console.log("SUBMIT_RSVP_OK");

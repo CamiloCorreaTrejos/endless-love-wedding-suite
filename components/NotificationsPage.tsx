@@ -286,9 +286,10 @@ export const NotificationsPage: React.FC = () => {
                             {format(new Date(n.createdAt), "d 'de' MMMM, HH:mm", { locale: es })}
                           </span>
                           <span className={`text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${
-                            n.type === 'task_due' ? 'bg-stone-100 text-stone-500' :
-                            n.type === 'vendor_due' ? 'bg-indigo-50 text-indigo-500' :
-                            n.type === 'budget_alert' ? 'bg-emerald-50 text-emerald-500' : 'bg-stone-50 text-stone-400'
+                            n.type.includes('task') ? 'bg-stone-100 text-stone-500' :
+                            n.type.includes('vendor') ? 'bg-indigo-50 text-indigo-500' :
+                            n.type === 'budget_alert' ? 'bg-emerald-50 text-emerald-500' :
+                            n.type === 'rsvp_update' ? 'bg-rose-50 text-rose-500' : 'bg-stone-50 text-stone-400'
                           }`}>
                             {n.type}
                           </span>

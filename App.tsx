@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { GuestList } from './components/GuestList';
@@ -8,6 +8,7 @@ import { TaskList } from './components/TaskList';
 import { SeatingPlanner } from './components/SeatingPlanner';
 import { VendorManager } from './components/VendorManager';
 import { RsvpManager } from './components/RsvpManager';
+import { createAndDispatchNotification } from './services/notifications';
 import { PublicRsvp } from './components/PublicRsvp';
 import { NotificationsPage } from './components/NotificationsPage';
 import { ToastContainer } from './components/ToastContainer';
@@ -42,10 +43,20 @@ const AppContent: React.FC = () => {
   const { authUser, session, userProfile, loading: authLoading, authError, profileLoading, profileWarning, signOut, retryBootstrap, retryProfile } = useAuth();
   const { weddingData, loading: dataLoading, error: dataError, refetchAll, setWeddingData } = useWeddingData();
   const { refetch: refetchNotifs } = useNotifications();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (window.location.pathname === '/notificaciones') return 'notifications';
+    return 'dashboard';
+  });
   const [actionError, setActionError] = useState<string | null>(null);
+  const hasCheckedNotifications = useRef(false);
 
   const weddingId = userProfile?.wedding_id;
+
+  useEffect(() => {
+    if (activeTab !== 'notifications' && window.location.pathname === '/notificaciones') {
+      window.history.pushState({}, '', '/');
+    }
+  }, [activeTab]);
 
   // --- RSVP Route Detection ---
   const path = window.location.pathname;
@@ -66,6 +77,103 @@ const AppContent: React.FC = () => {
       return () => clearInterval(interval);
     }
   }, [weddingId, userProfile?.id, refetchNotifs, profileLoading]);
+
+  // --- Auto-check for Notifications ---
+  useEffect(() => {
+    if (weddingId && !hasCheckedNotifications.current && (weddingData.tasks.length > 0 || weddingData.vendors.length > 0 || weddingData.expenses.length > 0)) {
+      hasCheckedNotifications.current = true;
+      const checkNotifications = async () => {
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        // Check Tasks
+        for (const task of weddingData.tasks) {
+          if (task.completed) continue;
+
+          const dueDate = new Date(task.dueDate);
+          
+          if (dueDate < now) {
+            await createAndDispatchNotification(
+              weddingId,
+              null,
+              'task_overdue',
+              'Tarea vencida',
+              `La tarea "${task.title}" está vencida`,
+              'urgent',
+              '/tareas'
+            );
+          } else if (dueDate <= tomorrow) {
+            await createAndDispatchNotification(
+              weddingId,
+              null,
+              'task_due',
+              'Tarea por vencer',
+              `La tarea "${task.title}" vence pronto`,
+              'warning',
+              '/tareas'
+            );
+          }
+        }
+
+        // Check Vendors
+        for (const vendor of weddingData.vendors) {
+          if (vendor.paidAmount >= vendor.totalAmount || !vendor.dueDate) continue;
+          
+          const dueDate = new Date(vendor.dueDate);
+          if (dueDate < now) {
+            await createAndDispatchNotification(
+              weddingId,
+              null,
+              'vendor_overdue',
+              'Pago atrasado',
+              `El pago a "${vendor.name}" está atrasado`,
+              'urgent',
+              '/proveedores'
+            );
+          } else if (dueDate <= tomorrow) {
+            await createAndDispatchNotification(
+              weddingId,
+              null,
+              'vendor_due',
+              'Pago próximo',
+              `El pago a "${vendor.name}" vence pronto`,
+              'warning',
+              '/proveedores'
+            );
+          }
+        }
+
+        // Check Budget
+        const totalSpent = weddingData.expenses.reduce((acc, curr) => acc + curr.actual, 0);
+        if (weddingData.budget > 0) {
+          const usage = totalSpent / weddingData.budget;
+          if (usage >= 1) {
+            await createAndDispatchNotification(
+              weddingId,
+              null,
+              'budget_alert',
+              'Presupuesto excedido',
+              `Has superado el presupuesto total de la boda`,
+              'urgent',
+              '/presupuesto'
+            );
+          } else if (usage >= 0.9) {
+            await createAndDispatchNotification(
+              weddingId,
+              null,
+              'budget_alert',
+              'Presupuesto al límite',
+              `Has consumido el ${(usage * 100).toFixed(0)}% del presupuesto`,
+              'warning',
+              '/presupuesto'
+            );
+          }
+        }
+      };
+      checkNotifications();
+    }
+  }, [weddingId, weddingData]);
 
   // --- Handlers de Datos con Supabase ---
   const handleAddGuest = async (guest: Omit<Guest, 'id'>) => {
@@ -291,12 +399,9 @@ const AppContent: React.FC = () => {
   };
 
   // --- Notifications Route Detection ---
-  const isNotifRoute = path === '/notificaciones';
-  
   const renderContent = () => {
-    if (isNotifRoute) return <NotificationsPage />;
-    
     switch (activeTab) {
+      case 'notifications': return <NotificationsPage />;
       case 'dashboard': return <Dashboard data={weddingData} />;
       case 'guests': return <GuestList guests={weddingData.guests} tables={weddingData.tables} onAddGuest={handleAddGuest} onRemoveGuest={handleRemoveGuest} onUpdateGuest={handleUpdateGuest} />;
       case 'seating': return <SeatingPlanner tables={weddingData.tables} guests={weddingData.guests} onUpdateTable={handleUpdateTable} onAddTable={handleAddTable} onRemoveTable={handleRemoveTable} onAssignGuest={handleAssignGuestToTable} />;
