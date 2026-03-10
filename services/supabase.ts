@@ -752,11 +752,10 @@ export const createTask = async (task: Omit<Task, 'id'>, weddingId: string) => {
     console.error("CREATE_TASK_ERROR", error);
   } else {
     console.log("CREATE_TASK_OK", { id: data.id });
-    console.log("TASK_NOTIFICATION_START");
     await createAndDispatchNotification(
       weddingId,
       null,
-      'general',
+      'task_created',
       'Nueva tarea creada',
       `Se creó la tarea: ${task.title}`,
       'info',
@@ -780,11 +779,10 @@ export const updateTask = async (taskId: string, updates: Partial<Task>, wedding
       // Fetch task title for notification
       const { data: taskData } = await supabase!.from('tasks').select('title').eq('id', taskId).single();
       if (taskData) {
-        console.log("TASK_NOTIFICATION_START");
         await createAndDispatchNotification(
           weddingId,
           null,
-          'general',
+          'task_completed',
           'Tarea completada',
           `La tarea "${taskData.title}" fue completada`,
           'info',
@@ -996,7 +994,6 @@ export const submitRsvpResponse = async (guestId: string, members: any[], rsvpSt
       const title = 'Nueva confirmación RSVP';
       const message = `${guestInfo.group_name || 'Un invitado'} ${statusText}`;
 
-      console.log("RSVP_NOTIFICATION_START");
       await createAndDispatchNotification(
         guestInfo.wedding_id,
         null,

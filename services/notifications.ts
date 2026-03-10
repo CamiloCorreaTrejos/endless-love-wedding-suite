@@ -21,25 +21,44 @@ export const sendPushToWeddingTokens = async (weddingId: string, payload: PushPa
     if (error) throw error;
 
     if (!tokens || tokens.length === 0) {
-      console.log("PUSH_DISPATCH_OK", "No active tokens found");
+      console.log("PUSH_DISPATCH_TOKENS_FOUND", 0);
+      console.log("PUSH_DISPATCH_DONE");
       return;
     }
 
+    console.log("PUSH_DISPATCH_TOKENS_FOUND", tokens.length);
+
     const tokenList = tokens.map(t => t.token);
+    let successCount = 0;
+    let errorCount = 0;
 
-    // Asumimos que hay una edge function llamada 'send-push' que maneja el envío a FCM
-    const { error: pushError } = await supabase!.functions.invoke('send-push', {
-      body: {
-        tokens: tokenList,
-        payload
+    // Enviamos a cada token individualmente para no detenernos si uno falla
+    for (const token of tokenList) {
+      try {
+        const { error: pushError } = await supabase!.functions.invoke('send-push', {
+          body: {
+            token, // Enviamos un solo token
+            payload
+          }
+        });
+
+        if (pushError) {
+          console.error("PUSH_DISPATCH_TOKEN_ERROR", { token, error: pushError });
+          errorCount++;
+        } else {
+          successCount++;
+        }
+      } catch (err) {
+        console.error("PUSH_DISPATCH_TOKEN_ERROR", { token, error: err });
+        errorCount++;
       }
-    });
+    }
 
-    if (pushError) throw pushError;
-
-    console.log("PUSH_DISPATCH_OK", `Sent to ${tokenList.length} tokens`);
+    console.log("PUSH_DISPATCH_OK", `Sent to ${successCount} tokens, ${errorCount} errors`);
+    console.log("PUSH_DISPATCH_DONE");
   } catch (error) {
-    console.error("PUSH_DISPATCH_ERROR", error);
+    console.error("PUSH_DISPATCH_TOKEN_ERROR", error);
+    console.log("PUSH_DISPATCH_DONE");
   }
 };
 
@@ -108,6 +127,12 @@ export const createAndDispatchNotification = async (
   severity: 'info' | 'warning' | 'urgent',
   link: string
 ) => {
+  if (type === 'rsvp_update') {
+    console.log("RSVP_NOTIFICATION_START", { weddingId, type, title });
+  } else if (type.startsWith('task_')) {
+    console.log("TASK_NOTIFICATION_START", { weddingId, type, title });
+  }
+
   const notif = await createAppNotification(weddingId, userId, type, title, message, severity, link);
   if (notif) {
     await sendPushToWeddingTokens(weddingId, {
