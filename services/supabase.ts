@@ -1092,8 +1092,9 @@ export const upsertNotificationToken = async (token: string, weddingId: string, 
         wedding_id: weddingId,
         user_id: userId,
         platform: 'web',
+        enabled: true,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'token' });
+      }, { onConflict: 'wedding_id,user_id,token' });
     
     if (error) throw error;
     console.log("UPSERT_TOKEN_OK");
