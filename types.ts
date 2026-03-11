@@ -5,7 +5,7 @@ export interface GuestMember {
   ageCategory: 'Adulto' | 'Niño';
   isUnknown?: boolean;
   tableId?: string;
-  attending?: boolean;
+  attending?: boolean | null;
   email?: string;
   dietaryRestrictions?: string;
   rsvpNotes?: string;

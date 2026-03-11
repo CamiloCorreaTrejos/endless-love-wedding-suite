@@ -121,7 +121,7 @@ export const createAppNotification = async (
 export const createAndDispatchNotification = async (
   weddingId: string,
   userId: string | null,
-  type: string,
+  type: 'general' | 'rsvp_update' | 'task_due' | 'task_overdue' | 'vendor_due' | 'vendor_overdue' | 'budget_alert',
   title: string,
   message: string,
   severity: 'info' | 'warning' | 'urgent',
@@ -129,7 +129,7 @@ export const createAndDispatchNotification = async (
 ) => {
   if (type === 'rsvp_update') {
     console.log("RSVP_NOTIFICATION_START", { weddingId, type, title });
-  } else if (type.startsWith('task_')) {
+  } else if (type === 'general' || type === 'task_due' || type === 'task_overdue') {
     console.log("TASK_NOTIFICATION_START", { weddingId, type, title });
   }
 

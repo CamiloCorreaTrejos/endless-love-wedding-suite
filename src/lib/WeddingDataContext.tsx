@@ -121,7 +121,7 @@ export const WeddingDataProvider: React.FC<{ children: React.ReactNode, weddingI
         { event: '*', schema: 'public', table: 'guest_members' },
         (payload) => {
           // Check if the guest_member belongs to our wedding by looking at current guests
-          const guestId = payload.new?.guest_id || payload.old?.guest_id;
+          const guestId = (payload.new as any)?.guest_id || (payload.old as any)?.guest_id;
           const belongsToWedding = weddingDataRef.current.guests.some(g => g.id === guestId);
           
           if (belongsToWedding) {

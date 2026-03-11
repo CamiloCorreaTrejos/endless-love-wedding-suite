@@ -755,7 +755,7 @@ export const createTask = async (task: Omit<Task, 'id'>, weddingId: string) => {
     await createAndDispatchNotification(
       weddingId,
       null,
-      'task_created',
+      'general',
       'Nueva tarea creada',
       `Se creó la tarea: ${task.title}`,
       'info',
@@ -782,7 +782,7 @@ export const updateTask = async (taskId: string, updates: Partial<Task>, wedding
         await createAndDispatchNotification(
           weddingId,
           null,
-          'task_completed',
+          'general',
           'Tarea completada',
           `La tarea "${taskData.title}" fue completada`,
           'info',
@@ -992,7 +992,8 @@ export const submitRsvpResponse = async (guestId: string, members: any[], rsvpSt
       if (rsvpStatus === 'rechazado') statusText = 'indicó que no asistirá';
 
       const title = 'Nueva confirmación RSVP';
-      const message = `${guestInfo.group_name || 'Un invitado'} ${statusText}`;
+      const groupName = guestInfo.group_name || 'Un invitado';
+      const message = `${groupName} ${statusText}`;
 
       await createAndDispatchNotification(
         guestInfo.wedding_id,
