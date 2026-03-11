@@ -24,16 +24,64 @@ export const dispatchPushNotification = async (payload: {
   link: string;
   type: string;
 }) => {
-  console.log("PUSH_EDGE_START", payload);
+  const isRsvp = payload.type === 'rsvp_update';
+  const isTask = payload.type === 'general' || payload.type.startsWith('task_');
+
+  if (isRsvp) console.log("RSVP_PUSH_EDGE_START", payload);
+  else if (isTask) console.log("TASK_PUSH_EDGE_START", payload);
+  else console.log("PUSH_EDGE_START", payload);
+
+  if (isTask) console.log("TASK_PUSH_EDGE_PAYLOAD", payload);
+
   try {
+    // Fetch and deduplicate tokens in the database before dispatch
+    const { data: tokensData, error: tokensError } = await supabase!
+      .from('notification_tokens')
+      .select('id, token')
+      .eq('wedding_id', payload.wedding_id)
+      .eq('enabled', true);
+
+    if (tokensError) throw tokensError;
+
+    if (!tokensData || tokensData.length === 0) {
+      if (isRsvp) console.log("RSVP_PUSH_EDGE_ALREADY_SENT_SKIPPED", "No tokens found");
+      return;
+    }
+
+    // Clean up duplicate tokens in the database to ensure the Edge Function only sends once per token
+    const seenTokens = new Set<string>();
+    const duplicateIds: string[] = [];
+    
+    for (const t of tokensData) {
+      if (seenTokens.has(t.token)) {
+        duplicateIds.push(t.id);
+      } else {
+        seenTokens.add(t.token);
+      }
+    }
+
+    if (duplicateIds.length > 0) {
+      console.log("CLEANING_UP_DUPLICATE_TOKENS", duplicateIds.length);
+      await supabase!.from('notification_tokens').delete().in('id', duplicateIds);
+    }
+
+    const uniqueTokens = Array.from(seenTokens);
+
     const { error } = await supabase!.functions.invoke('send-push-notification', {
-      body: payload
+      body: {
+        ...payload,
+        tokens: uniqueTokens // Pasamos los tokens únicos por si la Edge Function los usa
+      }
     });
 
     if (error) throw error;
-    console.log("PUSH_EDGE_OK");
+
+    if (isRsvp) console.log("RSVP_PUSH_EDGE_OK");
+    else if (isTask) console.log("TASK_PUSH_EDGE_OK");
+    else console.log("PUSH_EDGE_OK");
   } catch (error) {
-    console.error("PUSH_EDGE_ERROR", error);
+    if (isTask) console.error("TASK_PUSH_EDGE_ERROR", error);
+    else console.error("PUSH_EDGE_ERROR", error);
     // No lanzamos error para no romper el flujo principal si falla el push
   }
 };
@@ -52,18 +100,25 @@ export const createAppNotification = async (
 ) => {
   // Logs por módulo
   if (type === 'rsvp_update') console.log("RSVP_NOTIFICATION_START", { weddingId, title });
-  else if (type.startsWith('task_')) console.log("TASK_NOTIFICATION_START", { weddingId, title });
+  else if (type.startsWith('task_') || type === 'general') console.log("TASK_NOTIFICATION_START", { weddingId, title });
   else if (type.startsWith('vendor_')) console.log("VENDOR_NOTIFICATION_START", { weddingId, title });
   else if (type === 'budget_alert') console.log("BUDGET_NOTIFICATION_START", { weddingId, title });
 
   console.log("NOTIF_CREATE_START", { type, title });
 
   try {
-    // Evitar duplicados recientes (últimas 24h) para tipos automáticos (Tasks, Vendors, Budget)
+    // Evitar duplicados recientes (últimas 24h para automáticos, 1 min para RSVP y general)
     const autoTypes: NotificationType[] = ['task_due', 'task_overdue', 'vendor_due', 'vendor_overdue', 'budget_alert'];
-    if (autoTypes.includes(type)) {
-      const yesterday = new Date();
-      yesterday.setHours(yesterday.getHours() - 24);
+    const isAuto = autoTypes.includes(type);
+    const isRsvpOrGeneral = type === 'rsvp_update' || type === 'general';
+
+    if (isAuto || isRsvpOrGeneral) {
+      const timeLimit = new Date();
+      if (isAuto) {
+        timeLimit.setHours(timeLimit.getHours() - 24);
+      } else {
+        timeLimit.setMinutes(timeLimit.getMinutes() - 1); // 1 minuto para evitar doble submit
+      }
 
       const { data: existing, error: checkError } = await supabase!
         .from('notifications')
@@ -72,13 +127,16 @@ export const createAppNotification = async (
         .eq('type', type)
         .eq('title', title)
         .eq('message', message)
-        .gte('created_at', yesterday.toISOString())
+        .gte('created_at', timeLimit.toISOString())
         .limit(1);
 
       if (checkError) throw checkError;
 
       if (existing && existing.length > 0) {
         console.log("NOTIF_DUPLICATE_SKIPPED", { type, title });
+        if (type === 'rsvp_update') {
+          console.log("RSVP_PUSH_EDGE_ALREADY_SENT_SKIPPED");
+        }
         return null;
       }
     }
