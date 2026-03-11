@@ -34,43 +34,13 @@ export const dispatchPushNotification = async (payload: {
   if (isTask) console.log("TASK_PUSH_EDGE_PAYLOAD", payload);
 
   try {
-    // Fetch and deduplicate tokens in the database before dispatch
-    const { data: tokensData, error: tokensError } = await supabase!
-      .from('notification_tokens')
-      .select('id, token')
-      .eq('wedding_id', payload.wedding_id)
-      .eq('enabled', true);
-
-    if (tokensError) throw tokensError;
-
-    if (!tokensData || tokensData.length === 0) {
-      if (isRsvp) console.log("RSVP_PUSH_EDGE_ALREADY_SENT_SKIPPED", "No tokens found");
-      return;
-    }
-
-    // Clean up duplicate tokens in the database to ensure the Edge Function only sends once per token
-    const seenTokens = new Set<string>();
-    const duplicateIds: string[] = [];
-    
-    for (const t of tokensData) {
-      if (seenTokens.has(t.token)) {
-        duplicateIds.push(t.id);
-      } else {
-        seenTokens.add(t.token);
-      }
-    }
-
-    if (duplicateIds.length > 0) {
-      console.log("CLEANING_UP_DUPLICATE_TOKENS", duplicateIds.length);
-      await supabase!.from('notification_tokens').delete().in('id', duplicateIds);
-    }
-
-    const uniqueTokens = Array.from(seenTokens);
-
-    const { error } = await supabase!.functions.invoke('send-push-notification', {
+    const { data, error } = await supabase!.functions.invoke('send-push-notification', {
       body: {
-        ...payload,
-        tokens: uniqueTokens // Pasamos los tokens únicos por si la Edge Function los usa
+        wedding_id: payload.wedding_id,
+        title: payload.title,
+        message: payload.message,
+        link: payload.link,
+        type: payload.type,
       }
     });
 
