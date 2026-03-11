@@ -1,97 +1,86 @@
 import { supabase } from './supabase';
 
-export interface PushPayload {
+export type NotificationType = 'general' | 'rsvp_update' | 'task_due' | 'task_overdue' | 'vendor_due' | 'vendor_overdue' | 'budget_alert';
+export type NotificationSeverity = 'info' | 'warning' | 'urgent';
+
+export interface NotificationPayload {
+  weddingId: string;
+  userId: string | null;
+  type: NotificationType;
   title: string;
-  body: string;
-  data: {
-    url: string;
-    type?: string;
-  };
+  message: string;
+  severity: NotificationSeverity;
+  link: string;
 }
 
-export const sendPushToWeddingTokens = async (weddingId: string, payload: PushPayload) => {
-  console.log("PUSH_DISPATCH_START", { weddingId, payload });
+/**
+ * Invoca la Edge Function send-push-notification para enviar push real.
+ * Payload esperado por la Edge Function: wedding_id, title, message, link, type
+ */
+export const dispatchPushNotification = async (payload: {
+  wedding_id: string;
+  title: string;
+  message: string;
+  link: string;
+  type: string;
+}) => {
+  console.log("PUSH_EDGE_START", payload);
   try {
-    const { data: tokens, error } = await supabase!
-      .from('notification_tokens')
-      .select('token')
-      .eq('wedding_id', weddingId)
-      .eq('enabled', true);
+    const { error } = await supabase!.functions.invoke('send-push-notification', {
+      body: payload
+    });
 
     if (error) throw error;
-
-    if (!tokens || tokens.length === 0) {
-      console.log("PUSH_DISPATCH_TOKENS_FOUND", 0);
-      console.log("PUSH_DISPATCH_DONE");
-      return;
-    }
-
-    console.log("PUSH_DISPATCH_TOKENS_FOUND", tokens.length);
-
-    const tokenList = tokens.map(t => t.token);
-    let successCount = 0;
-    let errorCount = 0;
-
-    // Enviamos a cada token individualmente para no detenernos si uno falla
-    for (const token of tokenList) {
-      try {
-        const { error: pushError } = await supabase!.functions.invoke('send-push', {
-          body: {
-            token, // Enviamos un solo token
-            payload
-          }
-        });
-
-        if (pushError) {
-          console.error("PUSH_DISPATCH_TOKEN_ERROR", { token, error: pushError });
-          errorCount++;
-        } else {
-          successCount++;
-        }
-      } catch (err) {
-        console.error("PUSH_DISPATCH_TOKEN_ERROR", { token, error: err });
-        errorCount++;
-      }
-    }
-
-    console.log("PUSH_DISPATCH_OK", `Sent to ${successCount} tokens, ${errorCount} errors`);
-    console.log("PUSH_DISPATCH_DONE");
+    console.log("PUSH_EDGE_OK");
   } catch (error) {
-    console.error("PUSH_DISPATCH_TOKEN_ERROR", error);
-    console.log("PUSH_DISPATCH_DONE");
+    console.error("PUSH_EDGE_ERROR", error);
+    // No lanzamos error para no romper el flujo principal si falla el push
   }
 };
 
+/**
+ * Inserta una fila en la tabla notifications con prevención de duplicados para tipos automáticos.
+ */
 export const createAppNotification = async (
   weddingId: string,
   userId: string | null,
-  type: string,
+  type: NotificationType,
   title: string,
   message: string,
-  severity: 'info' | 'warning' | 'urgent',
+  severity: NotificationSeverity,
   link: string
 ) => {
+  // Logs por módulo
+  if (type === 'rsvp_update') console.log("RSVP_NOTIFICATION_START", { weddingId, title });
+  else if (type.startsWith('task_')) console.log("TASK_NOTIFICATION_START", { weddingId, title });
+  else if (type.startsWith('vendor_')) console.log("VENDOR_NOTIFICATION_START", { weddingId, title });
+  else if (type === 'budget_alert') console.log("BUDGET_NOTIFICATION_START", { weddingId, title });
+
   console.log("NOTIF_CREATE_START", { type, title });
+
   try {
-    // Evitar duplicados recientes (últimas 24h)
-    const yesterday = new Date();
-    yesterday.setHours(yesterday.getHours() - 24);
+    // Evitar duplicados recientes (últimas 24h) para tipos automáticos (Tasks, Vendors, Budget)
+    const autoTypes: NotificationType[] = ['task_due', 'task_overdue', 'vendor_due', 'vendor_overdue', 'budget_alert'];
+    if (autoTypes.includes(type)) {
+      const yesterday = new Date();
+      yesterday.setHours(yesterday.getHours() - 24);
 
-    const { data: existing, error: checkError } = await supabase!
-      .from('notifications')
-      .select('id')
-      .eq('wedding_id', weddingId)
-      .eq('type', type)
-      .eq('title', title)
-      .eq('message', message)
-      .gte('created_at', yesterday.toISOString())
-      .limit(1);
+      const { data: existing, error: checkError } = await supabase!
+        .from('notifications')
+        .select('id')
+        .eq('wedding_id', weddingId)
+        .eq('type', type)
+        .eq('title', title)
+        .eq('message', message)
+        .gte('created_at', yesterday.toISOString())
+        .limit(1);
 
-    if (checkError) throw checkError;
+      if (checkError) throw checkError;
 
-    if (existing && existing.length > 0) {
-      console.log("NOTIF_CREATE_OK", "Duplicate prevented");
-      return null;
+      if (existing && existing.length > 0) {
+        console.log("NOTIF_DUPLICATE_SKIPPED", { type, title });
+        return null;
+      }
     }
 
     const { data, error } = await supabase!
@@ -118,30 +107,28 @@ export const createAppNotification = async (
   }
 };
 
+/**
+ * Función central: Inserta en DB y despacha Push vía Edge Function.
+ */
 export const createAndDispatchNotification = async (
   weddingId: string,
   userId: string | null,
-  type: 'general' | 'rsvp_update' | 'task_due' | 'task_overdue' | 'vendor_due' | 'vendor_overdue' | 'budget_alert',
+  type: NotificationType,
   title: string,
   message: string,
-  severity: 'info' | 'warning' | 'urgent',
+  severity: NotificationSeverity,
   link: string
 ) => {
-  if (type === 'rsvp_update') {
-    console.log("RSVP_NOTIFICATION_START", { weddingId, type, title });
-  } else if (type === 'general' || type === 'task_due' || type === 'task_overdue') {
-    console.log("TASK_NOTIFICATION_START", { weddingId, type, title });
-  }
-
   const notif = await createAppNotification(weddingId, userId, type, title, message, severity, link);
+  
+  // Si se insertó (no era duplicado bloqueado), llamamos a la Edge Function
   if (notif) {
-    await sendPushToWeddingTokens(weddingId, {
+    await dispatchPushNotification({
+      wedding_id: weddingId,
       title,
-      body: message,
-      data: {
-        url: link,
-        type
-      }
+      message,
+      link,
+      type
     });
   }
 };

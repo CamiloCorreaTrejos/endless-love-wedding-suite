@@ -116,8 +116,8 @@ const AppContent: React.FC = () => {
               weddingId,
               null,
               'vendor_overdue',
-              'Pago atrasado',
-              `El pago a "${vendor.name}" está atrasado`,
+              'Pago de proveedor vencido',
+              `El pago de ${vendor.name} está vencido`,
               'urgent',
               '/proveedores'
             );
@@ -126,8 +126,8 @@ const AppContent: React.FC = () => {
               weddingId,
               null,
               'vendor_due',
-              'Pago próximo',
-              `El pago a "${vendor.name}" vence pronto`,
+              'Pago de proveedor próximo',
+              `El pago de ${vendor.name} vence pronto`,
               'warning',
               '/proveedores'
             );
@@ -144,7 +144,7 @@ const AppContent: React.FC = () => {
               null,
               'budget_alert',
               'Presupuesto excedido',
-              `Has superado el presupuesto total de la boda`,
+              `El presupuesto total ya fue excedido`,
               'urgent',
               '/presupuesto'
             );
@@ -153,8 +153,8 @@ const AppContent: React.FC = () => {
               weddingId,
               null,
               'budget_alert',
-              'Presupuesto al límite',
-              `Has consumido el ${(usage * 100).toFixed(0)}% del presupuesto`,
+              'Alerta de presupuesto',
+              `Ya se ha consumido más del 90% del presupuesto`,
               'warning',
               '/presupuesto'
             );
