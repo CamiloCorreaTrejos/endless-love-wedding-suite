@@ -27,31 +27,70 @@ export const dispatchPushNotification = async (payload: {
   const isRsvp = payload.type === 'rsvp_update';
   const isTask = payload.type === 'general' || payload.type.startsWith('task_');
 
-  if (isRsvp) console.log("RSVP_PUSH_EDGE_START", payload);
-  else if (isTask) console.log("TASK_PUSH_EDGE_START", payload);
-  else console.log("PUSH_EDGE_START", payload);
+  let finalPayload: any = {
+    wedding_id: payload.wedding_id,
+    title: payload.title,
+    message: payload.message,
+    link: payload.link,
+    type: payload.type,
+  };
 
-  if (isTask) console.log("TASK_PUSH_EDGE_PAYLOAD", payload);
+  if (isTask) {
+    // Normalizar el payload solo para Tasks
+    finalPayload = {
+      wedding_id: String(payload.wedding_id || ''),
+      title: String(payload.title || ''),
+      message: String(payload.message || ''),
+      link: String(payload.link || '/tareas'),
+      type: String(payload.type || 'general'),
+    };
+
+    if (!finalPayload.wedding_id || !finalPayload.title || !finalPayload.message) {
+      console.error("TASK_PUSH_EDGE_INVALID_PAYLOAD", finalPayload);
+      return;
+    }
+  }
+
+  if (isRsvp) console.log("RSVP_PUSH_EDGE_START", finalPayload);
+  else if (isTask) console.log("TASK_PUSH_EDGE_START", finalPayload);
+  else console.log("PUSH_EDGE_START", finalPayload);
+
+  if (isTask) console.log("TASK_PUSH_EDGE_PAYLOAD", finalPayload);
 
   try {
     const { data, error } = await supabase!.functions.invoke('send-push-notification', {
-      body: {
-        wedding_id: payload.wedding_id,
-        title: payload.title,
-        message: payload.message,
-        link: payload.link,
-        type: payload.type,
-      }
+      body: finalPayload
     });
 
-    if (error) throw error;
+    if (error) {
+      if (isTask) {
+        console.error("TASK_PUSH_EDGE_ERROR", {
+          error,
+          message: error.message,
+          name: error.name,
+          context: (error as any).context,
+          data
+        });
+      } else {
+        console.error("PUSH_EDGE_ERROR", error);
+      }
+      return;
+    }
 
     if (isRsvp) console.log("RSVP_PUSH_EDGE_OK");
     else if (isTask) console.log("TASK_PUSH_EDGE_OK");
     else console.log("PUSH_EDGE_OK");
-  } catch (error) {
-    if (isTask) console.error("TASK_PUSH_EDGE_ERROR", error);
-    else console.error("PUSH_EDGE_ERROR", error);
+  } catch (error: any) {
+    if (isTask) {
+      console.error("TASK_PUSH_EDGE_ERROR", {
+        error,
+        message: error.message,
+        name: error.name,
+        context: error.context
+      });
+    } else {
+      console.error("PUSH_EDGE_ERROR", error);
+    }
     // No lanzamos error para no romper el flujo principal si falla el push
   }
 };
