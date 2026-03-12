@@ -1,7 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import Markdown from 'react-markdown';
 import { ICONS } from '../constants';
 import { getWeddingAdvice, generateVisionImage } from '../services/gemini';
+import { WeddingData } from '../types';
 
 interface Message {
   role: 'user' | 'ai';
@@ -10,7 +12,11 @@ interface Message {
   imageUrl?: string;
 }
 
-export const AIPlanner: React.FC = () => {
+interface AIPlannerProps {
+  data?: WeddingData;
+}
+
+export const AIPlanner: React.FC<AIPlannerProps> = ({ data }) => {
   const [messages, setMessages] = useState<Message[]>([
     { role: 'ai', content: "¡Hola! Soy tu asistente de Endless Love. ¿En qué puedo ayudarte a planear vuestro día perfecto? Puedo buscar lugares, sugerir temas o incluso visualizar vuestros arreglos florales." }
   ]);
@@ -42,8 +48,27 @@ export const AIPlanner: React.FC = () => {
         }
       }
 
-      const response = await getWeddingAdvice(userMsg);
-      setMessages(prev => [...prev, { role: 'ai', content: response.text, sources: response.sources }]);
+      let contextString = '';
+      if (data) {
+        const totalBudget = data.budget;
+        const totalSpent = data.vendors.reduce((acc, v) => acc + v.totalAmount, 0);
+        const totalPaid = data.vendors.reduce((acc, v) => acc + v.paidAmount, 0);
+        const confirmedGuests = data.guests.filter(g => g.confirmation === 'Sí').reduce((acc, g) => acc + g.members.length, 0);
+        const pendingTasks = data.tasks.filter(t => !t.completed).length;
+        
+        contextString = `
+          Current Wedding Data:
+          - Date: ${data.date}
+          - Budget: $${totalBudget} (Spent: $${totalSpent}, Paid: $${totalPaid})
+          - Confirmed Guests: ${confirmedGuests}
+          - Pending Tasks: ${pendingTasks}
+          - Vendors: ${data.vendors.length}
+        `;
+      }
+
+      const chatHistory = messages.map(m => ({ role: m.role, content: m.content }));
+      const response = await getWeddingAdvice(userMsg, contextString, chatHistory);
+      setMessages(prev => [...prev, { role: 'ai', content: response.text || '', sources: response.sources }]);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'ai', content: "Lo siento, tuve un problema. Por favor, inténtalo de nuevo." }]);
     } finally {
@@ -52,7 +77,7 @@ export const AIPlanner: React.FC = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-12rem)] flex flex-col bg-white rounded-3xl border border-stone-200 shadow-xl overflow-hidden animate-in zoom-in-95 duration-300">
+    <div className="h-[60vh] flex flex-col bg-white overflow-hidden">
       <div className="bg-stone-50 p-4 border-b border-stone-100 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-rose-500 rounded-lg flex items-center justify-center text-white">
@@ -73,7 +98,9 @@ export const AIPlanner: React.FC = () => {
                 ? 'bg-rose-500 text-white rounded-tr-none' 
                 : 'bg-stone-100 text-stone-700 rounded-tl-none border border-stone-100'
             }`}>
-              <p>{m.content}</p>
+              <div className="markdown-body">
+                <Markdown>{m.content}</Markdown>
+              </div>
               {m.imageUrl && (
                 <div className="mt-3 rounded-xl overflow-hidden border-2 border-white shadow-md">
                    <img src={m.imageUrl} alt="IA Visión" className="w-full h-auto" />

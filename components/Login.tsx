@@ -65,10 +65,10 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col md:flex-row overflow-hidden bg-white select-none">
+    <div className="min-h-screen md:h-screen w-full flex flex-col md:flex-row md:overflow-hidden bg-white select-none">
       
       {/* Columna Izquierda: Fotografía Cinematográfica */}
-      <div className="w-full md:w-1/2 h-[32vh] md:h-full relative overflow-hidden shrink-0">
+      <div className="w-full md:w-1/2 h-[35vh] md:h-full relative overflow-hidden shrink-0">
         <img 
           src={weddingData.coverImageUrl || FALLBACK_URL} 
           alt={`${weddingData.partner1} & ${weddingData.partner2} Wedding`} 
@@ -88,19 +88,19 @@ export const Login: React.FC = () => {
       </div>
 
       {/* Columna Derecha: Panel de Acceso */}
-      <div className="w-full md:w-1/2 flex-1 md:h-full flex items-center justify-center p-4 py-8 sm:p-6 md:p-12 lg:p-16 overflow-y-auto md:overflow-hidden relative" style={{ backgroundColor: COLORS.primary }}>
+      <div className="w-full md:w-1/2 flex-1 flex items-center justify-center p-4 pb-12 pt-0 sm:p-6 md:p-12 lg:p-16 md:overflow-y-auto relative z-10" style={{ backgroundColor: COLORS.primary }}>
         
         <div className="absolute inset-0 opacity-[0.02] pointer-events-none" 
              style={{ backgroundImage: `url("https://www.transparenttextures.com/patterns/cream-paper.png")` }} />
 
-        <div className="w-full max-w-[440px] bg-white/90 backdrop-blur-md rounded-[2rem] md:rounded-[3.5rem] p-6 sm:p-8 md:p-10 lg:p-14 shadow-[0_40px_100px_-20px_rgba(15,26,46,0.12)] border border-white relative z-10 animate-in fade-in zoom-in-95 duration-1000">
+        <div className="w-full max-w-[440px] bg-white/90 backdrop-blur-md rounded-[2rem] md:rounded-[3.5rem] p-6 sm:p-8 md:p-10 lg:p-14 shadow-[0_40px_100px_-20px_rgba(15,26,46,0.12)] border border-white relative z-10 animate-in fade-in zoom-in-95 duration-1000 -mt-12 md:mt-0">
           
           <div className="flex flex-col items-center gap-6 md:gap-10 lg:gap-12">
             
             <div className="relative group">
-              <div className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-full flex items-center justify-center shadow-lg border border-stone-50 transition-transform duration-500 group-hover:scale-105">
-                <div className="w-12 h-12 md:w-16 md:h-16 rounded-full border border-dashed border-[#C6A75E]/30 flex items-center justify-center flex-col">
-                  <span className="text-lg md:text-xl font-bold text-[#0F1A2E] serif leading-none">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg border border-stone-50 transition-transform duration-500 group-hover:scale-105">
+                <div className="w-16 h-16 rounded-full border border-dashed border-[#C6A75E]/30 flex items-center justify-center flex-col">
+                  <span className="text-xl font-bold text-[#0F1A2E] serif leading-none whitespace-nowrap">
                     {weddingData.partner1[0]} & {weddingData.partner2[0]}
                   </span>
                   <Heart size={8} className="text-[#C6A75E] fill-[#C6A75E] mt-1" />

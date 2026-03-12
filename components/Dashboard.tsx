@@ -3,6 +3,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ICONS, COLORS } from '../constants';
 import { WeddingData, Vendor, Task } from '../types';
 import { AlertCircle, ArrowUpRight, CheckCircle2, Clock, DollarSign, Users, Briefcase, LayoutPanelTop, Utensils } from 'lucide-react';
+import { AIPlanner } from './AIPlanner';
+import { Modal } from './Modal';
 
 interface DashboardProps {
   data: WeddingData;
@@ -10,6 +12,7 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
+  const [isAIOpen, setIsAIOpen] = useState(false);
 
   // Countdown logic
   useEffect(() => {
@@ -329,7 +332,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
               <div className="relative z-10">
                 <h4 className="text-white font-bold text-2xl serif mb-2">Endless Love IA</h4>
                 <p className="text-stone-400 text-xs leading-relaxed mb-6">¿Necesitas ayuda con el presupuesto o sugerencias de proveedores?</p>
-                <button className="w-full py-4 bg-[#C6A75E] text-white font-bold rounded-2xl hover:brightness-110 transition-all flex items-center justify-center gap-2">
+                <button 
+                  onClick={() => setIsAIOpen(true)}
+                  className="w-full py-4 bg-[#C6A75E] text-white font-bold rounded-2xl hover:brightness-110 transition-all flex items-center justify-center gap-2"
+                >
                    {ICONS.AI} Abrir Asistente
                 </button>
               </div>
@@ -339,6 +345,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data }) => {
            </div>
         </div>
       </div>
+
+      <Modal isOpen={isAIOpen} onClose={() => setIsAIOpen(false)} title="Endless Love IA" subtitle="Tu consultor de bodas personal">
+         <AIPlanner data={data} />
+      </Modal>
     </div>
   );
 };

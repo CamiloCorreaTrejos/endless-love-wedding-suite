@@ -1,17 +1,26 @@
 import { GoogleGenAI } from "@google/genai";
 
-// Initialize GoogleGenAI using the environment variable API_KEY directly as a named parameter.
-// Fix: Remove 'as string' cast to comply with coding guidelines.
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize GoogleGenAI using the environment variable GEMINI_API_KEY directly as a named parameter.
+const getAI = () => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-export const getWeddingAdvice = async (prompt: string, context?: string) => {
+export const getWeddingAdvice = async (prompt: string, context?: string, history: {role: string, content: string}[] = []) => {
   const ai = getAI();
+  
+  const formattedHistory = history.map(msg => ({
+    role: msg.role === 'ai' ? 'model' : 'user',
+    parts: [{ text: msg.content }]
+  }));
+
+  const currentMessage = {
+    role: 'user',
+    parts: [{ text: `[DATOS ACTUALES DE LA BODA: ${context || 'Sin datos'}]\n\nPregunta: ${prompt}` }]
+  };
+
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `As a professional high-end wedding planner, assist the user with their request. 
-    Context: ${context || 'General wedding planning'}. 
-    User Request: ${prompt}`,
+    contents: [...formattedHistory, currentMessage],
     config: {
+      systemInstruction: "Eres un Wedding Planner de lujo, altamente eficiente, experto y directo. REGLAS ESTRICTAS: 1. NUNCA uses saludos repetitivos ni introducciones (ej. no digas 'Hola', 'Como tu wedding planner', '¡Claro que sí!'). 2. Ve directo al grano y responde la pregunta inmediatamente. 3. Sé conciso, profesional y proactivo. 4. Usa los datos de la boda proporcionados para dar respuestas ultra-personalizadas. 5. Mantén un tono elegante pero muy resolutivo.",
       temperature: 0.7,
       topP: 0.95,
       topK: 40,
