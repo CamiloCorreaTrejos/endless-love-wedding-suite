@@ -30,14 +30,13 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogout, children, data }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotifPanelOpen, setIsNotifPanelOpen] = useState(false);
 
   const { unreadCount } = useNotifications();
   const { userProfile } = useAuth();
 
-  const effectiveCollapsed = isCollapsed && !isHovered;
+  const effectiveCollapsed = isCollapsed;
 
   // Cálculos inteligentes para indicadores dinámicos
   const sidebarMetrics = useMemo(() => {
@@ -133,31 +132,33 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
     },
   ];
 
-  const SidebarContent = () => (
+  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => {
+    const collapsed = isMobile ? false : effectiveCollapsed;
+    return (
     <>
       {/* Logo & Brand */}
-      <div className={`p-8 flex items-center gap-3 border-b border-stone-50 transition-all duration-300 ${effectiveCollapsed ? 'justify-center' : ''}`}>
-        <div className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 shadow-lg" style={{ backgroundColor: COLORS.accent }}>
-          {ICONS.Heart}
+      <div className={`p-6 flex items-center gap-3 border-b border-stone-50 transition-all duration-300 ${collapsed ? 'justify-center' : ''}`}>
+        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0 shadow-lg" style={{ backgroundColor: COLORS.accent }}>
+          {React.cloneElement(ICONS.Heart as any, { size: 16 })}
         </div>
-        {!effectiveCollapsed && (
+        {!collapsed && (
           <div className="animate-in fade-in slide-in-from-left-2 duration-500">
-            <h1 className="text-xl font-bold text-stone-800 leading-tight serif">Endless Love</h1>
-            <p className="text-[9px] uppercase tracking-[0.2em] font-bold" style={{ color: COLORS.detail }}>Luxury Planner</p>
+            <h1 className="text-lg font-bold text-stone-800 leading-tight serif">Endless Love</h1>
+            <p className="text-[8px] uppercase tracking-[0.2em] font-bold" style={{ color: COLORS.detail }}>Luxury Planner</p>
           </div>
         )}
       </div>
 
       {/* Intelligent Status Block */}
-      {!effectiveCollapsed && (
-        <div className="px-6 py-6 animate-in fade-in slide-in-from-top-2 duration-700">
-          <div className="bg-stone-50/80 rounded-[1.5rem] p-4 border border-stone-100/50">
-             <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-2">Estado del Evento</p>
+      {!collapsed && (
+        <div className="px-4 py-4 animate-in fade-in slide-in-from-top-2 duration-700">
+          <div className="bg-stone-50/80 rounded-2xl p-3 border border-stone-100/50">
+             <p className="text-[8px] font-bold text-stone-400 uppercase tracking-widest mb-1.5">Estado del Evento</p>
              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full animate-pulse ${
+                <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${
                   sidebarMetrics.status === 'riesgo' ? 'bg-rose-500' : (sidebarMetrics.status === 'atencion' ? 'bg-amber-400' : 'bg-emerald-500')
                 }`} />
-                <span className="text-xs font-bold text-stone-700">
+                <span className="text-[11px] font-bold text-stone-700">
                   {sidebarMetrics.status === 'riesgo' ? 'Riesgo Crítico' : (sidebarMetrics.status === 'atencion' ? 'Requiere Atención' : 'Todo en Control')}
                 </span>
              </div>
@@ -166,7 +167,7 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-1 mt-2 overflow-y-auto custom-sidebar-scroll">
+      <nav className="flex-1 px-3 space-y-0.5 mt-2 overflow-y-auto custom-sidebar-scroll">
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
           return (
@@ -176,33 +177,33 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
                   setActiveTab(item.id);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all relative overflow-hidden ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative overflow-hidden ${
                   isActive 
-                    ? 'text-white font-bold shadow-xl shadow-[#0F1A2E]/10 z-10' 
+                    ? 'text-white font-bold shadow-md shadow-[#0F1A2E]/10 z-10' 
                     : 'text-stone-500 hover:bg-stone-50 hover:text-stone-800'
-                } ${effectiveCollapsed ? 'justify-center' : ''}`}
+                } ${collapsed ? 'justify-center' : ''}`}
                 style={{ backgroundColor: isActive ? COLORS.accent : 'transparent' }}
               >
                 <div className={`shrink-0 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover/nav:scale-110'}`}>
-                  {item.icon}
+                  {React.cloneElement(item.icon as any, { size: 16 })}
                 </div>
-                {!effectiveCollapsed && (
-                  <span className="text-xs tracking-tight animate-in fade-in slide-in-from-left-1">{item.label}</span>
+                {!collapsed && (
+                  <span className="text-[11px] tracking-tight animate-in fade-in slide-in-from-left-1">{item.label}</span>
                 )}
                 
-                {isActive && !effectiveCollapsed && (
+                {isActive && !collapsed && (
                   <div className="absolute right-4 w-1 h-1 bg-[#C6A75E] rounded-full shadow-[0_0_8px_#C6A75E]" />
                 )}
 
                 {item.badge && (
-                  <div className={`absolute ${effectiveCollapsed ? 'top-2 right-2' : 'right-4 top-1/2 -translate-y-1/2'} z-20`}>
+                  <div className={`absolute ${collapsed ? 'top-2 right-2' : 'right-4 top-1/2 -translate-y-1/2'} z-20`}>
                     {item.badge.type === 'dot' && <div className={`w-2 h-2 rounded-full shadow-sm ${item.badge.color}`} />}
-                    {item.badge.type === 'count' && !effectiveCollapsed && (
+                    {item.badge.type === 'count' && !collapsed && (
                       <div className={`px-1.5 py-0.5 rounded-lg text-[8px] font-black text-white ${item.badge.color}`}>
                         {item.badge.value}
                       </div>
                     )}
-                    {item.badge.type === 'icon' && !effectiveCollapsed && (
+                    {item.badge.type === 'icon' && !collapsed && (
                        <div className={`p-1 rounded-full text-white ${item.badge.color}`}>
                          {item.badge.icon}
                        </div>
@@ -211,7 +212,7 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
                 )}
               </button>
               
-              {effectiveCollapsed && (
+              {collapsed && (
                 <div className="absolute left-full ml-4 px-3 py-2 bg-[#0F1A2E] text-white text-[10px] font-bold uppercase tracking-widest rounded-lg opacity-0 group-hover/nav:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-[100] shadow-2xl">
                   {item.label}
                 </div>
@@ -222,14 +223,14 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
       </nav>
 
       {/* Footer Info & Progress */}
-      <div className="p-4 border-t border-stone-50 space-y-4">
-        {!effectiveCollapsed && (
-          <div className="px-2 space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-700">
+      <div className="p-3 border-t border-stone-50 space-y-3">
+        {!collapsed && (
+          <div className="px-2 space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-700">
              <div className="flex justify-between items-end mb-1">
-                <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Progreso del Evento</span>
-                <span className="text-[10px] font-bold text-[#C6A75E]">{sidebarMetrics.overallProgress}%</span>
+                <span className="text-[8px] font-bold text-stone-400 uppercase tracking-widest">Progreso del Evento</span>
+                <span className="text-[9px] font-bold text-[#C6A75E]">{sidebarMetrics.overallProgress}%</span>
              </div>
-             <div className="h-1.5 w-full bg-stone-100 rounded-full overflow-hidden shadow-inner">
+             <div className="h-1 w-full bg-stone-100 rounded-full overflow-hidden shadow-inner">
                 <div 
                   className="h-full bg-[#C6A75E] transition-all duration-1000 ease-out" 
                   style={{ width: `${sidebarMetrics.overallProgress}%` }} 
@@ -238,35 +239,34 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
           </div>
         )}
 
-        <div className={`p-3 bg-stone-50 rounded-2xl flex items-center gap-3 transition-all ${effectiveCollapsed ? 'justify-center' : ''}`}>
-          <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-white font-bold shrink-0 shadow-inner" style={{ backgroundColor: COLORS.detail }}>
+        <div className={`p-2 bg-stone-50 rounded-xl flex items-center gap-2 transition-all ${collapsed ? 'justify-center' : ''}`}>
+          <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-white text-[9px] font-bold shrink-0 shadow-inner" style={{ backgroundColor: COLORS.detail }}>
             {data.partner1[0]}{data.partner2[0]}
           </div>
-          {!effectiveCollapsed && (
+          {!collapsed && (
             <div className="flex-1 min-w-0 text-stone-800">
-              <p className="text-[10px] font-bold truncate uppercase tracking-tighter">{data.partner1} & {data.partner2}</p>
-              <p className="text-[9px] text-stone-400 font-medium">Evento Master</p>
+              <p className="text-[9px] font-bold truncate uppercase tracking-tighter">{data.partner1} & {data.partner2}</p>
+              <p className="text-[8px] text-stone-400 font-medium">Evento Master</p>
             </div>
           )}
         </div>
         
         <button 
           onClick={onLogout}
-          className={`w-full flex items-center gap-3 px-4 py-3 text-stone-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all text-xs font-bold uppercase tracking-widest ${effectiveCollapsed ? 'justify-center' : ''}`}
+          className={`w-full flex items-center gap-2 px-3 py-2 text-stone-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all text-[10px] font-bold uppercase tracking-widest ${collapsed ? 'justify-center' : ''}`}
         >
-          {React.cloneElement(ICONS.LogOut as any, { size: 16 })}
-          {!effectiveCollapsed && <span>Salir</span>}
+          {React.cloneElement(ICONS.LogOut as any, { size: 14 })}
+          {!collapsed && <span>Salir</span>}
         </button>
       </div>
     </>
   );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: COLORS.primary }}>
       {/* Desktop Sidebar */}
       <aside 
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
         className={`bg-white border-r border-stone-200 flex flex-col hidden md:flex transition-all duration-500 ease-in-out relative group z-40 ${effectiveCollapsed ? 'w-24' : 'w-72'}`}
       >
         <button 
@@ -290,21 +290,21 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
       <aside 
         className={`fixed inset-y-0 left-0 w-72 bg-white z-[70] md:hidden transition-transform duration-500 ease-in-out flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        <SidebarContent />
+        <SidebarContent isMobile={true} />
       </aside>
 
       {/* Contenido Principal */}
       <main className={`flex-1 relative flex flex-col bg-stone-50/50 ${activeTab === 'seating' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         {/* Topbar for Desktop Notifications */}
-        <div className="hidden md:flex justify-end p-6 absolute top-0 right-0 z-40">
+        <div className="hidden md:flex justify-end p-4 absolute top-0 right-0 z-40">
           <div className="relative">
             <button 
               onClick={() => setIsNotifPanelOpen(!isNotifPanelOpen)}
-              className="p-3 bg-white rounded-2xl border border-stone-100 shadow-sm text-stone-400 hover:text-[#0F1A2E] hover:shadow-md transition-all relative"
+              className="p-2.5 bg-white rounded-xl border border-stone-100 shadow-sm text-stone-400 hover:text-[#0F1A2E] hover:shadow-md transition-all relative"
             >
-              <Bell size={20} />
+              <Bell size={18} />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -362,7 +362,7 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
            </div>
         </div>
 
-        <div className={`max-w-7xl mx-auto p-4 md:p-12 w-full ${activeTab === 'seating' ? 'flex-1 flex flex-col min-h-0 pb-4 md:pb-8' : 'pb-32 md:pb-12'}`}>
+        <div className={`max-w-7xl mx-auto p-4 md:p-8 w-full ${activeTab === 'seating' ? 'flex-1 flex flex-col min-h-0 pb-4 md:pb-6' : 'pb-24 md:pb-8'}`}>
           {children}
         </div>
 

@@ -15,7 +15,9 @@ import {
   UserPlus,
   UserMinus,
   Lock,
-  Unlock
+  Unlock,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { Guest, GuestMember } from '../types';
 import { getRsvpDashboardByWedding, updateGuestRsvpFields, updateGuest, ensureGuestHasRsvpCode } from '../services/supabase';
@@ -33,6 +35,7 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
   const [showClosed, setShowClosed] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const PUBLIC_RSVP_BASE_URL = "https://camiloyvalen.netlify.app";
 
   const fetchData = async () => {
@@ -171,7 +174,23 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
             className="w-full pl-12 pr-4 py-3 bg-stone-50 border-none rounded-2xl text-xs focus:ring-2 focus:ring-[#C6A75E]/20 transition-all"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <div className="flex bg-stone-50 p-1 rounded-2xl border border-stone-100 shrink-0">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-[#0F1A2E]' : 'text-stone-400 hover:text-stone-600'}`}
+              title="Vista de cuadrícula"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-xl transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-[#0F1A2E]' : 'text-stone-400 hover:text-stone-600'}`}
+              title="Vista de lista"
+            >
+              <List size={16} />
+            </button>
+          </div>
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -195,79 +214,156 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
         </div>
       </div>
 
-      {/* List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {loading ? (
-          Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-48 bg-stone-100 rounded-3xl animate-pulse" />
-          ))
-        ) : filteredGuests.length > 0 ? (
-          filteredGuests.map((guest) => (
-            <div 
-              key={guest.id} 
-              className={`bg-white p-6 rounded-3xl border transition-all hover:shadow-lg group ${
-                guest.rsvpClosed ? 'border-stone-200 opacity-75' : 'border-stone-100'
-              }`}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-bold text-[#0F1A2E] serif mb-1">{guest.groupName}</h3>
-                  <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">{guest.category}</p>
-                </div>
-                {getStatusBadge(guest.rsvpStatus)}
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest mb-1.5">
-                    <span className="text-stone-400">Progreso</span>
-                    <span className="text-[#C6A75E]">{guest.attendingCount} / {guest.maxGuests}</span>
+      {/* Content Area */}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {loading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-48 bg-stone-100 rounded-3xl animate-pulse" />
+            ))
+          ) : filteredGuests.length > 0 ? (
+            filteredGuests.map((guest) => (
+              <div 
+                key={guest.id} 
+                className={`bg-white p-6 rounded-3xl border transition-all hover:shadow-lg group ${
+                  guest.rsvpClosed ? 'border-stone-200 opacity-75' : 'border-stone-100'
+                }`}
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-[#0F1A2E] serif mb-1">{guest.groupName}</h3>
+                    <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">{guest.category}</p>
                   </div>
-                  <div className="h-1.5 w-full bg-stone-50 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#C6A75E] transition-all duration-1000"
-                      style={{ width: `${(guest.attendingCount / guest.maxGuests) * 100}%` }}
-                    />
-                  </div>
+                  {getStatusBadge(guest.rsvpStatus)}
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-stone-50">
-                  <div className="flex flex-col">
-                    <span className="text-[8px] font-bold text-stone-300 uppercase tracking-widest mb-1">Código RSVP</span>
-                    <code className="text-xs font-bold text-stone-600 bg-stone-50 px-2 py-1 rounded-lg">{guest.rsvpCode}</code>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest mb-1.5">
+                      <span className="text-stone-400">Progreso</span>
+                      <span className="text-[#C6A75E]">{guest.attendingCount} / {guest.maxGuests}</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-stone-50 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-[#C6A75E] transition-all duration-1000"
+                        style={{ width: `${(guest.attendingCount / guest.maxGuests) * 100}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => handleCopyLink(guest.rsvpCode)}
-                      className="p-2.5 bg-stone-50 text-stone-400 rounded-xl hover:bg-[#C6A75E]/10 hover:text-[#C6A75E] transition-all"
-                      title="Copiar Link"
-                    >
-                      <Copy size={14} />
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setSelectedGuest(guest);
-                        setIsModalOpen(true);
-                      }}
-                      className="p-2.5 bg-[#0F1A2E] text-white rounded-xl hover:bg-opacity-90 transition-all"
-                      title="Ver Detalle"
-                    >
-                      <ChevronRight size={14} />
-                    </button>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-stone-50">
+                    <div className="flex flex-col">
+                      <span className="text-[8px] font-bold text-stone-300 uppercase tracking-widest mb-1">Código RSVP</span>
+                      <code className="text-xs font-bold text-stone-600 bg-stone-50 px-2 py-1 rounded-lg">{guest.rsvpCode}</code>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleCopyLink(guest.rsvpCode)}
+                        className="p-2.5 bg-stone-50 text-stone-400 rounded-xl hover:bg-[#C6A75E]/10 hover:text-[#C6A75E] transition-all"
+                        title="Copiar Link"
+                      >
+                        <Copy size={14} />
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setSelectedGuest(guest);
+                          setIsModalOpen(true);
+                        }}
+                        className="p-2.5 bg-[#0F1A2E] text-white rounded-xl hover:bg-opacity-90 transition-all"
+                        title="Ver Detalle"
+                      >
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="col-span-full py-20 text-center">
+              <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search size={24} className="text-stone-200" />
+              </div>
+              <p className="text-stone-400 text-xs font-bold uppercase tracking-widest">No se encontraron invitaciones</p>
             </div>
-          ))
-        ) : (
-          <div className="col-span-full py-20 text-center">
-            <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search size={24} className="text-stone-200" />
-            </div>
-            <p className="text-stone-400 text-xs font-bold uppercase tracking-widest">No se encontraron invitaciones</p>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white rounded-3xl border border-stone-100 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-stone-50 border-b border-stone-100 text-[9px] font-bold text-stone-400 uppercase tracking-widest">
+                  <th className="p-4 font-medium whitespace-nowrap">Grupo</th>
+                  <th className="p-4 font-medium whitespace-nowrap">Categoría</th>
+                  <th className="p-4 font-medium whitespace-nowrap">Estado</th>
+                  <th className="p-4 font-medium whitespace-nowrap">Progreso</th>
+                  <th className="p-4 font-medium whitespace-nowrap">Código</th>
+                  <th className="p-4 font-medium whitespace-nowrap text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="border-b border-stone-50">
+                      <td colSpan={6} className="p-4"><div className="h-10 bg-stone-100 rounded-xl animate-pulse" /></td>
+                    </tr>
+                  ))
+                ) : filteredGuests.length > 0 ? (
+                  filteredGuests.map((guest) => (
+                    <tr key={guest.id} className={`border-b border-stone-50 hover:bg-stone-50/50 transition-colors ${guest.rsvpClosed ? 'opacity-75' : ''}`}>
+                      <td className="p-4 font-bold text-[#0F1A2E] serif whitespace-nowrap">{guest.groupName}</td>
+                      <td className="p-4 text-[10px] font-bold text-stone-400 uppercase tracking-widest whitespace-nowrap">{guest.category}</td>
+                      <td className="p-4 whitespace-nowrap">{getStatusBadge(guest.rsvpStatus)}</td>
+                      <td className="p-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] font-bold text-[#C6A75E] w-8">{guest.attendingCount} / {guest.maxGuests}</span>
+                          <div className="w-20 h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-[#C6A75E]" style={{ width: `${(guest.attendingCount / guest.maxGuests) * 100}%` }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 whitespace-nowrap">
+                        <code className="text-xs font-bold text-stone-600 bg-stone-100 px-2 py-1 rounded-lg">{guest.rsvpCode}</code>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button 
+                            onClick={() => handleCopyLink(guest.rsvpCode)}
+                            className="p-2 bg-white border border-stone-100 text-stone-400 rounded-lg hover:border-[#C6A75E] hover:text-[#C6A75E] transition-all shadow-sm"
+                            title="Copiar Link"
+                          >
+                            <Copy size={14} />
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setSelectedGuest(guest);
+                              setIsModalOpen(true);
+                            }}
+                            className="p-2 bg-[#0F1A2E] text-white rounded-lg hover:bg-opacity-90 transition-all shadow-sm"
+                            title="Ver Detalle"
+                          >
+                            <ChevronRight size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="p-12 text-center">
+                      <div className="w-12 h-12 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Search size={20} className="text-stone-300" />
+                      </div>
+                      <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest">No se encontraron invitaciones</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Detail Modal */}
       {isModalOpen && selectedGuest && (

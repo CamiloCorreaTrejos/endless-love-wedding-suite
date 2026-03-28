@@ -115,23 +115,23 @@ export const VendorManager: React.FC<VendorManagerProps> = ({ vendors, onAddVend
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-5 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl md:text-4xl font-bold text-stone-800 serif">Proveedores</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-stone-800 serif">Proveedores</h2>
           <p className="text-stone-400 text-sm mt-1">Gestiona y supervisa todos los servicios contratados para tu gran día</p>
         </div>
         <button 
           onClick={openAddModal}
-          className="w-full md:w-auto bg-[#0F1A2E] text-white px-7 py-3.5 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 shadow-xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-widest"
+          className="w-full md:w-auto bg-[#0F1A2E] text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-widest"
         >
-          <Plus size={18} /> Añadir proveedor
+          <Plus size={16} /> Añadir proveedor
         </button>
       </div>
 
       {/* Summary Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <MetricCard label="Total" value={totalVendors} icon={<Briefcase className="text-stone-400" />} color="bg-stone-50" />
         <MetricCard label="Contratados" value={contractedVendors} icon={<CheckCircle2 className="text-emerald-500" />} color="bg-emerald-50" badgeColor="text-emerald-600" />
         <MetricCard label="Pendientes" value={pendingVendors} icon={<Filter className="text-amber-500" />} color="bg-amber-50" badgeColor="text-amber-600" />
@@ -139,23 +139,23 @@ export const VendorManager: React.FC<VendorManagerProps> = ({ vendors, onAddVend
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col lg:flex-row gap-4 items-center justify-between bg-white p-4 md:p-5 rounded-[2rem] md:rounded-[2.5rem] border border-stone-100 shadow-sm">
+      <div className="flex flex-col lg:flex-row gap-3 items-center justify-between bg-white p-3 md:p-4 rounded-2xl border border-stone-100 shadow-sm">
         <div className="relative w-full lg:w-96">
           <input 
             type="text" 
             placeholder="Buscar por nombre o contacto..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-3 md:py-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:border-[#C6A75E] focus:bg-white text-sm text-stone-800 transition-all font-medium"
+            className="w-full pl-10 pr-4 py-2 md:py-2.5 bg-stone-50 border border-stone-100 rounded-xl outline-none focus:border-[#C6A75E] focus:bg-white text-sm text-stone-800 transition-all font-medium"
           />
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-300" size={16} />
         </div>
 
-        <div className="flex items-center gap-3 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0 scrollbar-hide">
+        <div className="flex items-center gap-2 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0 scrollbar-hide">
           <select 
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="flex-1 lg:flex-none px-4 md:px-6 py-3 md:py-4 bg-stone-50 border border-stone-100 rounded-2xl text-xs font-bold text-stone-600 outline-none focus:border-[#C6A75E] transition-all min-w-[150px]"
+            className="flex-1 lg:flex-none px-3 md:px-4 py-2 md:py-2.5 bg-stone-50 border border-stone-100 rounded-xl text-xs font-bold text-stone-600 outline-none focus:border-[#C6A75E] transition-all min-w-[140px]"
           >
             <option value="Todos">Todas las categorías</option>
             {VENDOR_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
@@ -164,7 +164,7 @@ export const VendorManager: React.FC<VendorManagerProps> = ({ vendors, onAddVend
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="flex-1 lg:flex-none px-4 md:px-6 py-3 md:py-4 bg-stone-50 border border-stone-100 rounded-2xl text-xs font-bold text-stone-600 outline-none focus:border-[#C6A75E] transition-all min-w-[150px]"
+            className="flex-1 lg:flex-none px-3 md:px-4 py-2 md:py-2.5 bg-stone-50 border border-stone-100 rounded-xl text-xs font-bold text-stone-600 outline-none focus:border-[#C6A75E] transition-all min-w-[140px]"
           >
             <option value="Todos">Todos los estados</option>
             <option value="Pendiente">Pendiente</option>
@@ -173,20 +173,20 @@ export const VendorManager: React.FC<VendorManagerProps> = ({ vendors, onAddVend
             <option value="Cancelado">Cancelado</option>
           </select>
 
-          <div className="h-8 w-px bg-stone-100 mx-2 hidden lg:block" />
+          <div className="h-6 w-px bg-stone-100 mx-1 hidden lg:block" />
 
-          <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-2xl">
+          <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-xl">
             <button 
               onClick={() => setViewType('grid')}
-              className={`p-2.5 rounded-xl transition-all ${viewType === 'grid' ? 'bg-white text-[#0F1A2E] shadow-sm' : 'text-stone-400'}`}
+              className={`p-2 rounded-lg transition-all ${viewType === 'grid' ? 'bg-white text-[#0F1A2E] shadow-sm' : 'text-stone-400'}`}
             >
-              <LayoutGrid size={18} />
+              <LayoutGrid size={16} />
             </button>
             <button 
               onClick={() => setViewType('table')}
-              className={`p-2.5 rounded-xl transition-all ${viewType === 'table' ? 'bg-white text-[#0F1A2E] shadow-sm' : 'text-stone-400'}`}
+              className={`p-2 rounded-lg transition-all ${viewType === 'table' ? 'bg-white text-[#0F1A2E] shadow-sm' : 'text-stone-400'}`}
             >
-              <List size={18} />
+              <List size={16} />
             </button>
           </div>
         </div>
@@ -194,55 +194,55 @@ export const VendorManager: React.FC<VendorManagerProps> = ({ vendors, onAddVend
 
       {/* Grid View */}
       {viewType === 'grid' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {filteredVendors.map(vendor => (
             <VendorCard key={vendor.id} vendor={vendor} onEdit={openEditModal} />
           ))}
           {filteredVendors.length === 0 && (
-            <div className="col-span-full py-20 text-center">
-              <div className="w-20 h-20 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mx-auto mb-4">
-                <Briefcase size={36} />
+            <div className="col-span-full py-12 text-center">
+              <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center text-stone-200 mx-auto mb-3">
+                <Briefcase size={28} />
               </div>
               <p className="text-stone-400 text-sm font-medium italic">No se encontraron proveedores que coincidan con la búsqueda.</p>
             </div>
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-[2rem] border border-stone-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left min-w-[800px]">
               <thead className="bg-stone-50 border-b border-stone-100">
                 <tr className="text-[10px] uppercase font-bold text-stone-400 tracking-widest">
-                  <th className="px-8 py-4">Proveedor</th>
-                  <th className="px-8 py-4">Categoría</th>
-                  <th className="px-8 py-4">Presupuesto</th>
-                  <th className="px-8 py-4">Saldo</th>
-                  <th className="px-8 py-4">Estado</th>
-                  <th className="px-8 py-4 text-right">Acción</th>
+                  <th className="px-5 py-3">Proveedor</th>
+                  <th className="px-5 py-3">Categoría</th>
+                  <th className="px-5 py-3">Presupuesto</th>
+                  <th className="px-5 py-3">Saldo</th>
+                  <th className="px-5 py-3">Estado</th>
+                  <th className="px-5 py-3 text-right">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-50">
                 {filteredVendors.map(vendor => (
                   <tr key={vendor.id} className="hover:bg-stone-50/50 transition-colors group">
-                    <td className="px-8 py-5">
+                    <td className="px-5 py-3.5">
                       <p className="font-bold text-stone-800 text-sm">{vendor.name}</p>
                       <p className="text-[10px] text-stone-400">{vendor.contactName}</p>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-5 py-3.5">
                       <span className="text-xs font-semibold text-stone-500">{vendor.category}</span>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-5 py-3.5">
                       <p className="text-sm font-bold text-stone-800">${vendor.totalAmount.toLocaleString()}</p>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-5 py-3.5">
                       <p className="text-sm font-bold text-rose-500">${(vendor.totalAmount - vendor.paidAmount).toLocaleString()}</p>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-5 py-3.5">
                       <StatusBadge status={vendor.status} />
                     </td>
-                    <td className="px-8 py-5 text-right">
-                      <button onClick={() => openEditModal(vendor)} className="p-2 text-stone-300 hover:text-[#C6A75E] hover:bg-white rounded-lg transition-all md:opacity-0 group-hover:opacity-100">
-                        <Edit2 size={16} />
+                    <td className="px-5 py-3.5 text-right">
+                      <button onClick={() => openEditModal(vendor)} className="p-1.5 text-stone-300 hover:text-[#C6A75E] hover:bg-white rounded-md transition-all md:opacity-0 group-hover:opacity-100">
+                        <Edit2 size={14} />
                       </button>
                     </td>
                   </tr>
@@ -467,12 +467,12 @@ export const VendorManager: React.FC<VendorManagerProps> = ({ vendors, onAddVend
 
 // Subcomponentes
 const MetricCard = ({ label, value, icon, color, badgeColor }: { label: string, value: any, icon: any, color: string, badgeColor?: string }) => (
-  <div className={`p-6 rounded-3xl border border-stone-100 shadow-sm flex items-center justify-between ${color}`}>
+  <div className={`p-4 sm:p-5 rounded-2xl border border-stone-100 shadow-sm flex items-center justify-between ${color}`}>
     <div>
       <p className="text-[10px] uppercase font-bold text-stone-400 tracking-widest mb-1">{label}</p>
-      <h4 className={`text-2xl font-bold ${badgeColor || 'text-stone-800'}`}>{value}</h4>
+      <h4 className={`text-xl font-bold ${badgeColor || 'text-stone-800'}`}>{value}</h4>
     </div>
-    <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center">
+    <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center">
       {icon}
     </div>
   </div>
@@ -483,59 +483,59 @@ const VendorCard: React.FC<{ vendor: Vendor, onEdit: (v: Vendor) => void }> = ({
   const progress = (vendor.paidAmount / vendor.totalAmount) * 100 || 0;
 
   return (
-    <div className="bg-white rounded-[2.5rem] p-8 border border-stone-100 shadow-sm hover:shadow-xl transition-all group relative flex flex-col h-full border-t-8" style={{ borderTopColor: vendor.status === 'Contratado' ? '#10b981' : (vendor.status === 'Cotización' ? '#f59e0b' : '#e5e7eb') }}>
-      <div className="flex justify-between items-start mb-6">
+    <div className="bg-white rounded-2xl p-5 border border-stone-100 shadow-sm hover:shadow-md transition-all group relative flex flex-col h-full border-t-4" style={{ borderTopColor: vendor.status === 'Contratado' ? '#10b981' : (vendor.status === 'Cotización' ? '#f59e0b' : '#e5e7eb') }}>
+      <div className="flex justify-between items-start mb-4">
         <div>
-          <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#C6A75E] bg-[#C6A75E]/5 px-3 py-1 rounded-full mb-2 inline-block">
+          <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#C6A75E] bg-[#C6A75E]/5 px-2.5 py-1 rounded-full mb-2 inline-block">
             {vendor.category}
           </span>
-          <h3 className="text-xl font-bold text-stone-800 leading-tight group-hover:text-[#C6A75E] transition-colors">{vendor.name}</h3>
+          <h3 className="text-lg font-bold text-stone-800 leading-tight group-hover:text-[#C6A75E] transition-colors">{vendor.name}</h3>
         </div>
-        <button onClick={() => onEdit(vendor)} className="p-3 text-stone-200 hover:text-stone-800 transition-colors bg-stone-50 rounded-2xl group-hover:bg-white group-hover:shadow-md">
-          <Edit2 size={16} />
+        <button onClick={() => onEdit(vendor)} className="p-2 text-stone-200 hover:text-stone-800 transition-colors bg-stone-50 rounded-xl group-hover:bg-white group-hover:shadow-sm">
+          <Edit2 size={14} />
         </button>
       </div>
 
-      <div className="space-y-4 flex-1">
+      <div className="space-y-3 flex-1">
         {vendor.contactName && (
-          <div className="flex items-center gap-3 text-xs text-stone-500 font-medium">
-            <div className="w-8 h-8 rounded-lg bg-stone-50 flex items-center justify-center text-stone-400">
-               <Briefcase size={14} />
+          <div className="flex items-center gap-2.5 text-xs text-stone-500 font-medium">
+            <div className="w-6 h-6 rounded-md bg-stone-50 flex items-center justify-center text-stone-400 shrink-0">
+               <Briefcase size={12} />
             </div>
-            {vendor.contactName}
+            <span className="truncate">{vendor.contactName}</span>
           </div>
         )}
         {vendor.phone && (
-          <div className="flex items-center gap-3 text-xs text-stone-500 font-medium">
-            <div className="w-8 h-8 rounded-lg bg-stone-50 flex items-center justify-center text-stone-400">
-               <Phone size={14} />
+          <div className="flex items-center gap-2.5 text-xs text-stone-500 font-medium">
+            <div className="w-6 h-6 rounded-md bg-stone-50 flex items-center justify-center text-stone-400 shrink-0">
+               <Phone size={12} />
             </div>
-            {vendor.phone}
+            <span className="truncate">{vendor.phone}</span>
           </div>
         )}
         {vendor.email && (
-          <div className="flex items-center gap-3 text-xs text-stone-500 font-medium">
-            <div className="w-8 h-8 rounded-lg bg-stone-50 flex items-center justify-center text-stone-400">
-               <Mail size={14} />
+          <div className="flex items-center gap-2.5 text-xs text-stone-500 font-medium">
+            <div className="w-6 h-6 rounded-md bg-stone-50 flex items-center justify-center text-stone-400 shrink-0">
+               <Mail size={12} />
             </div>
-            {vendor.email}
+            <span className="truncate">{vendor.email}</span>
           </div>
         )}
         
-        <div className="pt-4 border-t border-stone-50">
-           <div className="flex justify-between text-[10px] font-bold uppercase text-stone-400 mb-2">
+        <div className="pt-3 border-t border-stone-50">
+           <div className="flex justify-between text-[10px] font-bold uppercase text-stone-400 mb-1.5">
               <span>Progreso de Pago</span>
               <span className={balance > 0 ? 'text-amber-600' : 'text-emerald-600'}>
                 {Math.round(progress)}%
               </span>
            </div>
-           <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden">
+           <div className="w-full h-1.5 bg-stone-100 rounded-full overflow-hidden">
               <div 
                 className={`h-full transition-all duration-1000 ${progress === 100 ? 'bg-emerald-500' : 'bg-amber-400'}`} 
                 style={{ width: `${progress}%` }} 
               />
            </div>
-           <div className="flex justify-between mt-3">
+           <div className="flex justify-between mt-2">
               <div>
                 <p className="text-[9px] text-stone-400 font-bold uppercase">Pagado</p>
                 <p className="text-sm font-bold text-stone-800">${vendor.paidAmount.toLocaleString()}</p>
@@ -548,7 +548,7 @@ const VendorCard: React.FC<{ vendor: Vendor, onEdit: (v: Vendor) => void }> = ({
         </div>
       </div>
 
-      <div className="mt-8 flex items-center justify-between pt-5 border-t border-stone-50">
+      <div className="mt-5 flex items-center justify-between pt-4 border-t border-stone-50">
         <div className="flex items-center gap-2">
           <StatusBadge status={vendor.status} />
           {vendor.pdfUrl && (
@@ -557,24 +557,24 @@ const VendorCard: React.FC<{ vendor: Vendor, onEdit: (v: Vendor) => void }> = ({
                 e.stopPropagation();
                 window.open(vendor.pdfUrl, '_blank', 'noopener,noreferrer');
               }}
-              className="px-2.5 py-1 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100 transition-all flex items-center gap-1.5 border border-rose-100/50"
+              className="px-2 py-1 bg-rose-50 text-rose-500 rounded-md hover:bg-rose-100 transition-all flex items-center gap-1 border border-rose-100/50"
               title={vendor.pdfName || 'Ver Contrato'}
             >
-              <FileText size={12} />
-              <span className="text-[9px] font-bold uppercase tracking-tighter">
-                PDF • {vendor.pdfName ? (vendor.pdfName.length > 15 ? vendor.pdfName.substring(0, 12) + '...' : vendor.pdfName) : 'Contrato'}
+              <FileText size={10} />
+              <span className="text-[8px] font-bold uppercase tracking-tighter">
+                PDF • {vendor.pdfName ? (vendor.pdfName.length > 12 ? vendor.pdfName.substring(0, 9) + '...' : vendor.pdfName) : 'Contrato'}
               </span>
             </button>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {vendor.contractSigned ? (
-            <div className="flex items-center gap-1.5 text-emerald-600 text-[10px] font-bold uppercase">
-              <FileText size={14} /> Contrato OK
+            <div className="flex items-center gap-1 text-emerald-600 text-[9px] font-bold uppercase">
+              <FileText size={12} /> Contrato OK
             </div>
           ) : (
-             <div className="flex items-center gap-1.5 text-rose-400 text-[10px] font-bold uppercase">
-              <AlertCircle size={14} /> Sin firma
+             <div className="flex items-center gap-1 text-rose-400 text-[9px] font-bold uppercase">
+              <AlertCircle size={12} /> Sin firma
             </div>
           )}
         </div>
@@ -592,7 +592,7 @@ const StatusBadge = ({ status }: { status: string }) => {
   }[status] || 'bg-stone-50 text-stone-500';
 
   return (
-    <span className={`px-3 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-wider ${styles}`}>
+    <span className={`px-2.5 py-1 rounded-lg text-[8px] font-bold uppercase tracking-wider ${styles}`}>
       {status}
     </span>
   );

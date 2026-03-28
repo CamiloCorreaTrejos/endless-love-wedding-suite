@@ -119,15 +119,15 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700">
+    <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-700">
       {/* Header Editorial */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-stone-100 pb-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 border-b border-stone-100 pb-3">
         <div>
-          <h2 className="text-4xl font-bold text-stone-800 serif">Tareas Pendientes</h2>
-          <div className="flex items-center gap-3 mt-2">
-            <p className="text-stone-400 text-sm">Organización táctica paso a paso</p>
+          <h2 className="text-2xl font-bold text-stone-800 serif">Tareas Pendientes</h2>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-stone-400 text-xs">Organización táctica paso a paso</p>
             <div className="w-1 h-1 rounded-full bg-stone-200" />
-            <span className="text-[10px] font-bold text-[#C6A75E] uppercase tracking-widest">
+            <span className="text-[9px] font-bold text-[#C6A75E] uppercase tracking-widest">
               {metrics.percent}% Completado
             </span>
           </div>
@@ -135,14 +135,14 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
         
         <button 
           onClick={openAddModal}
-          className="bg-[#0F1A2E] text-white px-8 py-4 rounded-[1.5rem] text-xs font-bold flex items-center gap-2 shadow-xl hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.1em]"
+          className="bg-[#0F1A2E] text-white px-4 py-2 rounded-xl text-[10px] font-bold flex items-center gap-2 shadow-md hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.1em]"
         >
           {ICONS.Plus} Nueva Tarea
         </button>
       </div>
 
       {/* Strategic Summary Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
         <TaskSummaryCard 
           label="Críticas" 
           value={metrics.highPriority} 
@@ -176,18 +176,18 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
       </div>
 
       {/* Toolbar - Search */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-[2rem] border border-stone-100 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 bg-white p-2 rounded-xl border border-stone-100 shadow-sm">
         <div className="relative w-full md:max-w-md">
           <input 
             type="text" 
             placeholder="Buscar tarea por nombre..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3.5 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:border-[#C6A75E] focus:bg-white text-sm text-stone-800 transition-all font-medium"
+            className="w-full pl-9 pr-3 py-1.5 bg-stone-50 border border-stone-100 rounded-lg outline-none focus:border-[#C6A75E] focus:bg-white text-xs text-stone-800 transition-all font-medium"
           />
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300" size={18} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" size={14} />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+        <div className="flex gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
            <FilterBtn label="Todas" active />
            <FilterBtn label="Pendientes" />
            <FilterBtn label="Completas" />
@@ -195,70 +195,70 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
       </div>
 
       {/* Task List - Editorial Style */}
-      <div className="space-y-4">
+      <div className="space-y-2 sm:space-y-2.5">
         {filteredTasks.map((task) => (
           <div 
             key={task.id} 
-            className={`group flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 p-6 bg-white border border-stone-100 rounded-[2rem] shadow-sm transition-all hover:shadow-md hover:border-[#C6A75E]/20 ${task.completed ? 'opacity-60' : ''}`}
+            className={`group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 sm:p-3.5 bg-white border border-stone-100 rounded-xl shadow-sm transition-all hover:shadow hover:border-[#C6A75E]/20 ${task.completed ? 'opacity-60' : ''}`}
           >
-            <div className="flex items-center gap-4 sm:gap-6">
+            <div className="flex items-center gap-3 sm:gap-4">
               {/* Elegant Checkbox */}
               <button 
                 onClick={() => onToggleTask(task.id)}
-                className={`w-10 h-10 rounded-2xl border-2 flex items-center justify-center transition-all shrink-0 ${
+                className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 ${
                   task.completed 
-                    ? 'bg-emerald-500 border-emerald-500 shadow-lg shadow-emerald-100' 
+                    ? 'bg-emerald-500 border-emerald-500 shadow-md shadow-emerald-100' 
                     : 'bg-white border-stone-100 group-hover:border-[#C6A75E]'
                 }`}
               >
-                {task.completed && <CheckCircle2 size={20} className="text-white" />}
+                {task.completed && <CheckCircle2 size={14} className="text-white" />}
               </button>
 
               <div className="flex-1 min-w-0">
-                 <h4 className={`text-base md:text-lg font-bold serif transition-all ${task.completed ? 'text-stone-400 line-through' : 'text-stone-800'}`}>
+                 <h4 className={`text-sm font-bold serif transition-all ${task.completed ? 'text-stone-400 line-through' : 'text-stone-800'}`}>
                    {task.title}
                  </h4>
-                 <div className="flex items-center gap-4 mt-1.5">
-                    <div className="flex items-center gap-1.5 text-stone-400">
-                      <CalendarIcon size={12} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">
+                 <div className="flex items-center gap-3 mt-0.5">
+                    <div className="flex items-center gap-1 text-stone-400">
+                      <CalendarIcon size={10} />
+                      <span className="text-[9px] font-bold uppercase tracking-widest">
                         {new Date(task.dueDate).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
                       </span>
                     </div>
                     {new Date(task.dueDate) < new Date() && !task.completed && (
-                      <span className="text-[9px] font-bold text-rose-500 uppercase bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100">Vencida</span>
+                      <span className="text-[8px] font-bold text-rose-500 uppercase bg-rose-50 px-1.5 py-0.5 rounded-md border border-rose-100">Vencida</span>
                     )}
                  </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 mt-2 sm:mt-0 ml-14 sm:ml-0">
+            <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 mt-1 sm:mt-0 ml-9 sm:ml-0">
               <PriorityBadge priority={task.priority} />
               
-              <div className="flex items-center gap-2 md:opacity-0 group-hover:opacity-100 transition-all">
+              <div className="flex items-center gap-1 md:opacity-0 group-hover:opacity-100 transition-all">
                 <button 
                   onClick={() => openEditModal(task)}
-                  className="p-3 text-stone-300 hover:text-[#0F1A2E] hover:bg-stone-50 rounded-xl transition-all shadow-sm"
+                  className="p-1.5 text-stone-300 hover:text-[#0F1A2E] hover:bg-stone-50 rounded-md transition-all shadow-sm"
                 >
-                  {ICONS.Edit}
+                  <ICONS.Edit.type {...ICONS.Edit.props} size={14} />
                 </button>
                 <button 
                   onClick={() => onRemoveTask(task.id)}
-                  className="p-3 text-stone-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                  className="p-1.5 text-stone-300 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all"
                 >
-                  <ICONS.Trash.type {...ICONS.Trash.props} size={16} />
+                  <ICONS.Trash.type {...ICONS.Trash.props} size={14} />
                 </button>
               </div>
             </div>
           </div>
         ))}
         {filteredTasks.length === 0 && (
-           <div className="py-24 text-center bg-stone-50/50 rounded-[3rem] border border-dashed border-stone-200">
-              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-stone-200 mx-auto mb-6 shadow-sm">
-                <CheckCircle2 size={36} />
+           <div className="py-8 text-center bg-stone-50/50 rounded-2xl border border-dashed border-stone-200">
+              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-stone-200 mx-auto mb-3 shadow-sm">
+                <CheckCircle2 size={24} />
               </div>
-              <h4 className="text-xl font-bold text-stone-800 serif">Todo en orden</h4>
-              <p className="text-stone-400 text-sm mt-2 serif italic px-8">No hay tareas pendientes en esta categoría.</p>
+              <h4 className="text-base font-bold text-stone-800 serif">Todo en orden</h4>
+              <p className="text-stone-400 text-xs mt-1 serif italic px-6">No hay tareas pendientes en esta categoría.</p>
            </div>
         )}
       </div>
@@ -270,45 +270,45 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
         title={editingTaskId ? 'Detalle de Tarea' : 'Nueva Tarea'}
         subtitle="Agrega una acción y mantén el control del evento"
       >
-        <form onSubmit={handleSave} className="space-y-8">
+        <form onSubmit={handleSave} className="space-y-6">
           {/* Bloque: Información Básica */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex items-center gap-2 px-1">
-               <ICONS.AI.type {...ICONS.AI.props} size={14} className="text-[#C6A75E]" />
-               <h4 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Información Básica</h4>
+               <ICONS.AI.type {...ICONS.AI.props} size={12} className="text-[#C6A75E]" />
+               <h4 className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Información Básica</h4>
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-stone-500 uppercase tracking-widest ml-1">¿Qué hay que hacer?</label>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-bold text-stone-500 uppercase tracking-widest ml-1">¿Qué hay que hacer?</label>
               <input 
                 type="text" required value={title} 
                 onChange={e => setTitle(e.target.value)} 
                 placeholder="Ej: Contratar transporte para invitados, sesión de fotos..."
-                className="w-full px-6 py-4 bg-stone-50 border border-stone-100 rounded-2xl outline-none focus:border-[#C6A75E] focus:bg-white text-sm font-semibold text-stone-800 transition-all shadow-inner"
+                className="w-full px-4 py-2.5 bg-stone-50 border border-stone-100 rounded-xl outline-none focus:border-[#C6A75E] focus:bg-white text-xs font-semibold text-stone-800 transition-all shadow-inner"
               />
             </div>
           </div>
 
           {/* Layout Dos Columnas: Gestión */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-4 border-t border-stone-50">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-stone-50">
             {/* Columna: Fecha */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex items-center gap-2 px-1">
-                 <CalendarIcon size={14} className="text-[#C6A75E]" />
-                 <h4 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Fecha Límite</h4>
+                 <CalendarIcon size={12} className="text-[#C6A75E]" />
+                 <h4 className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Fecha Límite</h4>
               </div>
               
-              <div className="bg-stone-50 p-6 rounded-[2rem] border border-stone-100 shadow-inner">
-                <div className="flex items-center justify-between mb-4">
-                  <button type="button" onClick={() => changeMonth(-1)} className="p-2 hover:bg-white rounded-xl transition-all text-stone-400"><ChevronLeft size={16} /></button>
-                  <span className="text-[11px] font-bold text-stone-800 uppercase tracking-tighter">{months[viewDate.getMonth()]} {viewDate.getFullYear()}</span>
-                  <button type="button" onClick={() => changeMonth(1)} className="p-2 hover:bg-white rounded-xl transition-all text-stone-400"><ChevronRight size={16} /></button>
+              <div className="bg-stone-50 p-4 rounded-2xl border border-stone-100 shadow-inner">
+                <div className="flex items-center justify-between mb-3">
+                  <button type="button" onClick={() => changeMonth(-1)} className="p-1.5 hover:bg-white rounded-lg transition-all text-stone-400"><ChevronLeft size={14} /></button>
+                  <span className="text-[10px] font-bold text-stone-800 uppercase tracking-tighter">{months[viewDate.getMonth()]} {viewDate.getFullYear()}</span>
+                  <button type="button" onClick={() => changeMonth(1)} className="p-1.5 hover:bg-white rounded-lg transition-all text-stone-400"><ChevronRight size={14} /></button>
                 </div>
 
-                <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                  {daysOfWeek.map(d => <span key={d} className="text-[9px] font-bold text-stone-300">{d}</span>)}
+                <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
+                  {daysOfWeek.map(d => <span key={d} className="text-[8px] font-bold text-stone-300">{d}</span>)}
                 </div>
 
-                <div className="grid grid-cols-7 gap-1.5 text-center">
+                <div className="grid grid-cols-7 gap-1 text-center">
                   {calendarDays.map((day, idx) => {
                     if (day === null) return <div key={`empty-${idx}`} />;
                     const dateStr = `${viewDate.getFullYear()}-${(viewDate.getMonth() + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
@@ -317,9 +317,9 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
                     return (
                       <button
                         key={`day-${idx}`} type="button" onClick={() => handleDateSelect(day)}
-                        className={`h-9 w-9 text-[11px] font-bold rounded-xl flex items-center justify-center transition-all ${
+                        className={`h-7 w-7 text-[10px] font-bold rounded-lg flex items-center justify-center transition-all ${
                           isSelected 
-                            ? 'bg-[#0F1A2E] text-white shadow-xl scale-110' 
+                            ? 'bg-[#0F1A2E] text-white shadow-md scale-110' 
                             : 'hover:bg-white text-stone-600'
                         }`}
                       >
@@ -330,29 +330,29 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
                 </div>
               </div>
               <div className="px-1 flex items-center justify-between">
-                 <span className="text-[9px] font-bold text-stone-400 uppercase">Selección:</span>
-                 <span className="text-[10px] font-bold text-[#C6A75E]">{dueDate}</span>
+                 <span className="text-[8px] font-bold text-stone-400 uppercase">Selección:</span>
+                 <span className="text-[9px] font-bold text-[#C6A75E]">{dueDate}</span>
               </div>
             </div>
 
             {/* Columna: Prioridad */}
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex items-center gap-2 px-1">
-                 <Flag size={14} className="text-[#C6A75E]" />
-                 <h4 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Prioridad Estratégica</h4>
+                 <Flag size={12} className="text-[#C6A75E]" />
+                 <h4 className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">Prioridad Estratégica</h4>
               </div>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2">
                 {(['Low', 'Medium', 'High'] as const).map((p) => (
                   <button
                     key={p} type="button" onClick={() => setPriority(p)}
-                    className={`w-full py-4 px-6 rounded-2xl border-2 text-[11px] font-bold transition-all text-left flex items-center justify-between uppercase tracking-wider ${
+                    className={`w-full py-2.5 px-4 rounded-xl border-2 text-[10px] font-bold transition-all text-left flex items-center justify-between uppercase tracking-wider ${
                       priority === p 
-                        ? 'bg-[#0F1A2E] text-white border-transparent shadow-xl' 
+                        ? 'bg-[#0F1A2E] text-white border-transparent shadow-md' 
                         : 'bg-stone-50 text-stone-400 border-stone-100 hover:bg-stone-100 hover:text-stone-600'
                     }`}
                   >
                     {p === 'High' ? 'Crítica' : (p === 'Medium' ? 'Media' : 'Informativa')}
-                    <ArrowRight size={14} className={priority === p ? 'opacity-100' : 'opacity-0'} />
+                    <ArrowRight size={12} className={priority === p ? 'opacity-100' : 'opacity-0'} />
                   </button>
                 ))}
               </div>
@@ -360,16 +360,16 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
           </div>
 
           {/* Botonera */}
-          <div className="flex gap-4 pt-6">
+          <div className="flex gap-3 pt-4">
             <button 
               type="button" onClick={() => setIsModalOpen(false)}
-              className="flex-1 py-5 border-2 border-stone-100 rounded-[1.8rem] text-stone-400 font-bold text-sm hover:bg-stone-50 transition-all active:scale-95"
+              className="flex-1 py-3 border-2 border-stone-100 rounded-xl text-stone-400 font-bold text-xs hover:bg-stone-50 transition-all active:scale-95"
             >
               Cancelar
             </button>
             <button 
               type="submit"
-              className="flex-[2] py-5 text-white font-bold rounded-[1.8rem] shadow-2xl hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 tracking-[0.2em] uppercase text-xs"
+              className="flex-[2] py-3 text-white font-bold rounded-xl shadow-lg hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 tracking-[0.2em] uppercase text-[10px]"
               style={{ backgroundColor: COLORS.accent }}
             >
               {editingTaskId ? 'Actualizar Tarea' : 'Crear Tarea'}
@@ -383,13 +383,13 @@ export const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleTask, onAddTa
 
 // Subcomponentes Internos Refinados
 const TaskSummaryCard = ({ label, value, icon, color, textColor, alert = false }: any) => (
-  <div className={`p-8 rounded-[2.5rem] border border-stone-100 shadow-sm flex items-center gap-6 transition-all hover:shadow-lg ${color}`}>
-    <div className={`w-14 h-14 rounded-3xl flex items-center justify-center shadow-sm ${alert ? 'bg-rose-500 text-white animate-pulse' : 'bg-white text-stone-400'}`}>
+  <div className={`p-3 sm:p-4 rounded-2xl border border-stone-100 shadow-sm flex items-center gap-3 transition-all hover:shadow-md ${color}`}>
+    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-sm shrink-0 ${alert ? 'bg-rose-500 text-white animate-pulse' : 'bg-white text-stone-400'}`}>
       {icon}
     </div>
     <div>
-      <p className="text-[10px] uppercase font-bold text-stone-400 tracking-widest mb-1">{label}</p>
-      <h4 className={`text-3xl font-bold serif leading-none ${textColor}`}>{value}</h4>
+      <p className="text-[9px] uppercase font-bold text-stone-400 tracking-widest mb-0.5">{label}</p>
+      <h4 className={`text-xl font-bold serif leading-none ${textColor}`}>{value}</h4>
     </div>
   </div>
 );
@@ -404,14 +404,14 @@ const PriorityBadge = ({ priority }: { priority: 'Low' | 'Medium' | 'High' }) =>
   const labels = { High: 'Alta', Medium: 'Media', Low: 'Baja' }[priority];
 
   return (
-    <span className={`px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-[0.1em] border ${styles}`}>
+    <span className={`px-2 py-0.5 rounded-md text-[8px] font-bold uppercase tracking-[0.1em] border ${styles}`}>
       {labels}
     </span>
   );
 };
 
 const FilterBtn = ({ label, active = false }: { label: string, active?: boolean }) => (
-  <button className={`px-5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${active ? 'bg-[#0F1A2E] text-white shadow-md' : 'text-stone-400 hover:bg-stone-50 hover:text-stone-600'}`}>
+  <button className={`px-3 py-1 rounded-md text-[9px] font-bold uppercase tracking-widest transition-all ${active ? 'bg-[#0F1A2E] text-white shadow-sm' : 'text-stone-400 hover:bg-stone-50 hover:text-stone-600'}`}>
     {label}
   </button>
 );

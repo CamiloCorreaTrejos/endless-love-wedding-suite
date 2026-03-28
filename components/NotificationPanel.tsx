@@ -120,7 +120,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, w
         <button 
           onClick={() => {
             // Navigate to notifications page
-            window.location.href = '/notificaciones';
+            window.location.href = '/?section=notificaciones';
             onClose();
           }}
           className="text-[10px] font-bold text-stone-500 uppercase tracking-[0.2em] hover:text-[#0F1A2E] transition-colors"

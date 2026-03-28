@@ -112,9 +112,9 @@ export const NotificationsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-6 animate-in fade-in duration-700">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-[#0F1A2E] serif mb-2">Notificaciones</h2>
           <p className="text-stone-400 text-xs font-medium uppercase tracking-[0.2em]">Gestiona tus alertas y actualizaciones</p>
@@ -139,20 +139,20 @@ export const NotificationsPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Settings Sidebar */}
-        <div className="space-y-6">
-          <div className="bg-white p-8 rounded-[2rem] border border-stone-100 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
+        <div className="space-y-4">
+          <div className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-stone-50 rounded-xl text-stone-400">
                 <Settings size={18} />
               </div>
               <h3 className="text-sm font-bold text-[#0F1A2E] uppercase tracking-widest">Ajustes de Notificaciones</h3>
             </div>
 
-            <div className="space-y-6">
-              <div className="p-6 bg-stone-50 rounded-2xl border border-stone-100">
-                <div className="flex items-center gap-3 mb-4">
+            <div className="space-y-4">
+              <div className="p-5 bg-stone-50 rounded-2xl border border-stone-100">
+                <div className="flex items-center gap-3 mb-3">
                   <Smartphone size={18} className="text-stone-400" />
                   <span className="text-[10px] font-bold text-stone-600 uppercase tracking-widest">Notificaciones Push</span>
                 </div>
@@ -216,9 +216,9 @@ export const NotificationsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-2 block">Filtrar por Tipo</label>
+                  <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1.5 block">Filtrar por Tipo</label>
                   <select 
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
@@ -233,7 +233,7 @@ export const NotificationsPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-2 block">Filtrar por Severidad</label>
+                  <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1.5 block">Filtrar por Severidad</label>
                   <select 
                     value={severityFilter}
                     onChange={(e) => setSeverityFilter(e.target.value)}
@@ -251,24 +251,24 @@ export const NotificationsPage: React.FC = () => {
         </div>
 
         {/* Notifications List */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-3">
           {loading && notifications.length === 0 ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-24 bg-stone-100 rounded-3xl animate-pulse" />
+              <div key={i} className="h-20 bg-stone-100 rounded-3xl animate-pulse" />
             ))
           ) : filteredNotifs.length > 0 ? (
             filteredNotifs.map((n) => (
               <div 
                 key={n.id} 
-                className={`bg-white p-6 rounded-[2rem] border transition-all hover:shadow-md relative group ${
+                className={`bg-white p-5 rounded-3xl border transition-all hover:shadow-md relative group ${
                   !n.isRead ? 'border-[#C6A75E]/30' : 'border-stone-100 opacity-80'
                 }`}
               >
                 {!n.isRead && (
-                  <div className="absolute left-0 top-6 bottom-6 w-1 bg-[#C6A75E] rounded-r-full" />
+                  <div className="absolute left-0 top-5 bottom-5 w-1 bg-[#C6A75E] rounded-r-full" />
                 )}
-                <div className="flex gap-6">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                <div className="flex gap-4">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
                     n.severity === 'urgent' ? 'bg-rose-50' : 
                     n.severity === 'warning' ? 'bg-amber-50' : 'bg-blue-50'
                   }`}>
@@ -305,7 +305,7 @@ export const NotificationsPage: React.FC = () => {
                         </button>
                       )}
                     </div>
-                    <p className={`text-sm leading-relaxed mb-4 ${!n.isRead ? 'text-stone-600' : 'text-stone-400'}`}>
+                    <p className={`text-xs leading-relaxed mb-3 ${!n.isRead ? 'text-stone-600' : 'text-stone-400'}`}>
                       {n.message}
                     </p>
                     {n.link && (
@@ -322,9 +322,9 @@ export const NotificationsPage: React.FC = () => {
               </div>
             ))
           ) : (
-            <div className="bg-white py-20 rounded-[3rem] border border-stone-100 text-center">
-              <div className="w-20 h-20 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Bell size={32} className="text-stone-200" />
+            <div className="bg-white py-16 rounded-3xl border border-stone-100 text-center">
+              <div className="w-16 h-16 bg-stone-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Bell size={24} className="text-stone-200" />
               </div>
               <p className="text-stone-400 text-xs font-bold uppercase tracking-widest">No hay notificaciones para mostrar</p>
             </div>
