@@ -759,7 +759,7 @@ export const createTask = async (task: Omit<Task, 'id'>, weddingId: string) => {
       'Nueva tarea creada',
       `Se creó la tarea: ${task.title}`,
       'info',
-      '/tareas'
+      '/?section=tareas'
     );
   }
   return { data, error };
@@ -786,7 +786,7 @@ export const updateTask = async (taskId: string, updates: Partial<Task>, wedding
           'Tarea completada',
           `La tarea "${taskData.title}" fue completada`,
           'info',
-          '/tareas'
+          '/?section=tareas'
         );
       }
     }
@@ -1002,7 +1002,7 @@ export const submitRsvpResponse = async (guestId: string, members: any[], rsvpSt
         title,
         message,
         severity,
-        '/confirmaciones'
+        '/?section=confirmaciones'
       );
     }
 

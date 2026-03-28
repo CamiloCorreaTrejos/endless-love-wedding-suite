@@ -41,7 +41,7 @@ export const dispatchPushNotification = async (payload: {
       wedding_id: String(payload.wedding_id || ''),
       title: String(payload.title || ''),
       message: String(payload.message || ''),
-      link: String(payload.link || '/tareas'),
+      link: String(payload.link || '/?section=tareas'),
       type: String(payload.type || 'general'),
     };
 

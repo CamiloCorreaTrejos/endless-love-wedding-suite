@@ -28,7 +28,7 @@ messaging.onBackgroundMessage((payload) => {
 // Click
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification?.data?.url || "/notificaciones";
+  const url = event.notification?.data?.url || "/?section=notificaciones";
   event.waitUntil(clients.openWindow(url));
 });
 
@@ -60,7 +60,7 @@ self.addEventListener('push', (event) => {
     icon: '/pwa-192.png',
     badge: '/pwa-192.png',
     data: {
-      url: data.link || '/notificaciones'
+      url: data.link || '/?section=notificaciones'
     }
   };
 

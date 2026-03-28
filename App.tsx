@@ -43,6 +43,24 @@ const AppContent: React.FC = () => {
   const { authUser, session, userProfile, loading: authLoading, authError, profileLoading, profileWarning, signOut, retryBootstrap, retryProfile } = useAuth();
   const { weddingData, loading: dataLoading, error: dataError, refetchAll, setWeddingData } = useWeddingData();
   const [activeTab, setActiveTab] = useState(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const section = searchParams.get('section');
+    
+    if (section) {
+      const sectionMap: Record<string, string> = {
+        'tareas': 'tasks',
+        'confirmaciones': 'rsvp',
+        'proveedores': 'vendors',
+        'presupuesto': 'budget',
+        'dashboard': 'dashboard',
+        'notificaciones': 'notifications'
+      };
+      
+      if (sectionMap[section]) {
+        return sectionMap[section];
+      }
+    }
+    
     if (window.location.pathname === '/notificaciones') return 'notifications';
     return 'dashboard';
   });
@@ -56,6 +74,17 @@ const AppContent: React.FC = () => {
       window.history.pushState({}, '', '/');
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    const isAppReady = !authLoading && !profileLoading && authUser && userProfile?.wedding_id && userProfile.wedding_id !== 'placeholder';
+    
+    if (isAppReady) {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.has('section')) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, [authLoading, profileLoading, authUser, userProfile]);
 
   // --- RSVP Route Detection ---
   const path = window.location.pathname;
@@ -91,7 +120,7 @@ const AppContent: React.FC = () => {
               'Tarea vencida',
               `La tarea "${task.title}" está vencida`,
               'urgent',
-              '/tareas'
+              '/?section=tareas'
             );
           } else if (dueDate <= tomorrow) {
             await createAndDispatchNotification(
@@ -101,7 +130,7 @@ const AppContent: React.FC = () => {
               'Tarea por vencer',
               `La tarea "${task.title}" vence pronto`,
               'warning',
-              '/tareas'
+              '/?section=tareas'
             );
           }
         }
@@ -119,7 +148,7 @@ const AppContent: React.FC = () => {
               'Pago de proveedor vencido',
               `El pago de ${vendor.name} está vencido`,
               'urgent',
-              '/proveedores'
+              '/?section=proveedores'
             );
           } else if (dueDate <= tomorrow) {
             await createAndDispatchNotification(
@@ -129,7 +158,7 @@ const AppContent: React.FC = () => {
               'Pago de proveedor próximo',
               `El pago de ${vendor.name} vence pronto`,
               'warning',
-              '/proveedores'
+              '/?section=proveedores'
             );
           }
         }
@@ -146,7 +175,7 @@ const AppContent: React.FC = () => {
               'Presupuesto excedido',
               `El presupuesto total ya fue excedido`,
               'urgent',
-              '/presupuesto'
+              '/?section=presupuesto'
             );
           } else if (usage >= 0.9) {
             await createAndDispatchNotification(
@@ -156,7 +185,7 @@ const AppContent: React.FC = () => {
               'Alerta de presupuesto',
               `Ya se ha consumido más del 90% del presupuesto`,
               'warning',
-              '/presupuesto'
+              '/?section=presupuesto'
             );
           }
         }

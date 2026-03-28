@@ -90,7 +90,7 @@ export const NotificationsPage: React.FC = () => {
       message: 'Esta es una notificación generada manualmente para probar la interfaz.',
       type: types[Math.floor(Math.random() * types.length)] as any,
       severity: severities[Math.floor(Math.random() * severities.length)] as any,
-      link: '/dashboard'
+      link: '/?section=dashboard'
     }, weddingId);
     
     refetch(weddingId, userId);
