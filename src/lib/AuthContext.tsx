@@ -147,11 +147,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
-        console.error('AUTH_BOOT_SESSION_ERROR', sessionError);
-        throw sessionError;
-      }
-
-      if (initialSession?.user) {
+        if (sessionError.message?.includes('Refresh Token') || sessionError.message?.includes('refresh_token')) {
+          console.warn('AUTH_BOOT_SESSION_EXPIRED', sessionError);
+          await supabase.auth.signOut();
+          setSession(null);
+          setAuthUser(null);
+          setUserProfile(null);
+        } else {
+          console.error('AUTH_BOOT_SESSION_ERROR', sessionError);
+          throw sessionError;
+        }
+      } else if (initialSession?.user) {
         console.log('AUTH_BOOT_SESSION_OK', initialSession.user.id);
         setSession(initialSession);
         setAuthUser(initialSession.user);
@@ -166,10 +172,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAuthUser(null);
         setUserProfile(null);
       }
-    } catch (err) {
-      console.error('AUTH_BOOT_CRITICAL_ERROR', err);
-      setAuthError("Error crítico al iniciar sesión.");
-      setUserProfile(null);
+    } catch (err: any) {
+      if (err?.message?.includes('Refresh Token') || err?.message?.includes('refresh_token')) {
+        console.warn('AUTH_BOOT_SESSION_EXPIRED_CATCH', err);
+        await supabase.auth.signOut();
+        setSession(null);
+        setAuthUser(null);
+        setUserProfile(null);
+      } else {
+        console.error('AUTH_BOOT_CRITICAL_ERROR', err);
+        setAuthError("Error crítico al iniciar sesión.");
+        setUserProfile(null);
+      }
     } finally {
       console.log('AUTH_LOADING_END');
       setLoading(false);

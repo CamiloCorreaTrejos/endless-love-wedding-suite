@@ -2,6 +2,7 @@
 import { createAndDispatchNotification } from './notifications';
 import { supabase } from "../src/lib/supabaseClient";
 import { Guest, Table, BudgetItem, Task, Vendor, GuestMember, NotificationItem } from "../types";
+import { parseAgeCategoryInput, parseGuestCategoryInput, parseStatusInput, parseCertaintyInput, parseRsvpStatusInput } from '../src/lib/guestMappers';
 
 export { supabase };
 
@@ -12,7 +13,7 @@ export const isSupabaseConfigured = () => !!supabase;
 export const mapGuestMemberRowToUI = (row: any): GuestMember => ({
   id: row.id,
   name: row.name ?? 'Invitado',
-  ageCategory: row.age_category ?? 'Adulto',
+  ageCategory: parseAgeCategoryInput(row.age_category ?? 'adulto'),
   isUnknown: row.is_unknown ?? false,
   tableId: row.table_id ?? undefined,
   attending: row.attending ?? undefined,
@@ -24,15 +25,15 @@ export const mapGuestMemberRowToUI = (row: any): GuestMember => ({
 export const mapGuestRowToUI = (row: any): Guest => ({
   id: row.id,
   groupName: row.group_name ?? '',
-  category: row.category ?? 'Familia de Camilo',
-  status: row.status ?? 'Pendiente',
-  certainty: row.certainty ?? 'Seguro',
-  confirmation: row.confirmation ?? 'No',
+  category: parseGuestCategoryInput(row.category ?? 'familia_camilo'),
+  status: parseStatusInput(row.status ?? 'pendiente'),
+  certainty: parseCertaintyInput(row.certainty ?? 'seguro'),
+  confirmation: row.confirmation ?? 'no',
   dietary: row.dietary_notes ?? '',
   members: (row.guest_members ?? []).map(mapGuestMemberRowToUI),
   maxGuests: row.max_guests ?? 1,
   rsvpCode: row.rsvp_code ?? '',
-  rsvpStatus: row.rsvp_status ?? 'pendiente',
+  rsvpStatus: parseRsvpStatusInput(row.rsvp_status ?? 'pendiente'),
   rsvpSubmittedAt: row.rsvp_submitted_at ?? undefined,
   rsvpClosed: row.rsvp_closed ?? false,
 });
@@ -92,23 +93,23 @@ const normalizeValue = (val: any) => (val === undefined || val === '' ? null : v
 export const mapGuestUIToInsertPayload = (guest: Omit<Guest, 'id'>, weddingId: string) => ({
   wedding_id: weddingId,
   group_name: normalizeValue(guest.groupName),
-  category: normalizeValue(guest.category),
-  status: normalizeValue(guest.status),
-  certainty: normalizeValue(guest.certainty),
+  category: normalizeValue(parseGuestCategoryInput(guest.category)),
+  status: normalizeValue(parseStatusInput(guest.status)),
+  certainty: normalizeValue(parseCertaintyInput(guest.certainty)),
   confirmation: normalizeValue(guest.confirmation),
   dietary_notes: normalizeValue(guest.dietary),
   max_guests: guest.maxGuests ?? 1,
   rsvp_code: normalizeValue(guest.rsvpCode),
-  rsvp_status: guest.rsvpStatus ?? 'pendiente',
+  rsvp_status: parseRsvpStatusInput(guest.rsvpStatus ?? 'pendiente'),
   rsvp_closed: guest.rsvpClosed ?? false,
 });
 
 export const mapGuestUIToUpdatePatch = (updates: Partial<Guest>) => {
   const patch: any = {};
   if (updates.groupName !== undefined) patch.group_name = normalizeValue(updates.groupName);
-  if (updates.category !== undefined) patch.category = normalizeValue(updates.category);
-  if (updates.status !== undefined) patch.status = normalizeValue(updates.status);
-  if (updates.certainty !== undefined) patch.certainty = normalizeValue(updates.certainty);
+  if (updates.category !== undefined) patch.category = normalizeValue(parseGuestCategoryInput(updates.category));
+  if (updates.status !== undefined) patch.status = normalizeValue(parseStatusInput(updates.status));
+  if (updates.certainty !== undefined) patch.certainty = normalizeValue(parseCertaintyInput(updates.certainty));
   if (updates.confirmation !== undefined) patch.confirmation = normalizeValue(updates.confirmation);
   if (updates.dietary !== undefined) patch.dietary_notes = normalizeValue(updates.dietary);
   if (updates.maxGuests !== undefined) patch.max_guests = updates.maxGuests;
@@ -118,7 +119,7 @@ export const mapGuestUIToUpdatePatch = (updates: Partial<Guest>) => {
     patch.rsvp_code = updates.rsvpCode;
   }
   
-  if (updates.rsvpStatus !== undefined) patch.rsvp_status = updates.rsvpStatus;
+  if (updates.rsvpStatus !== undefined) patch.rsvp_status = parseRsvpStatusInput(updates.rsvpStatus);
   if (updates.rsvpClosed !== undefined) patch.rsvp_closed = updates.rsvpClosed;
   if (updates.rsvpSubmittedAt !== undefined) patch.rsvp_submitted_at = updates.rsvpSubmittedAt;
   return patch;
@@ -127,7 +128,7 @@ export const mapGuestUIToUpdatePatch = (updates: Partial<Guest>) => {
 export const mapGuestMemberUIToInsertPayload = (member: Omit<GuestMember, 'id'>, guestId: string) => ({
   guest_id: guestId,
   name: normalizeValue(member.name),
-  age_category: normalizeValue(member.ageCategory),
+  age_category: normalizeValue(parseAgeCategoryInput(member.ageCategory)),
   is_unknown: member.isUnknown ?? false,
   table_id: normalizeValue(member.tableId),
   attending: member.attending ?? null,

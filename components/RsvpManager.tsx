@@ -8,6 +8,7 @@ import {
   Filter, 
   Copy, 
   ExternalLink, 
+  ChevronLeft,
   ChevronRight, 
   Download,
   AlertCircle,
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Guest, GuestMember } from '../types';
 import { getRsvpDashboardByWedding, updateGuestRsvpFields, updateGuest, ensureGuestHasRsvpCode } from '../services/supabase';
+import { getGuestCategoryLabel, getRsvpStatusLabel, parseAgeCategoryInput, parseRsvpStatusInput } from '../src/lib/guestMappers';
 
 interface RsvpManagerProps {
   weddingId: string;
@@ -35,7 +37,9 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
   const [showClosed, setShowClosed] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const PUBLIC_RSVP_BASE_URL = "https://camiloyvalen.netlify.app";
 
   const fetchData = async () => {
@@ -62,8 +66,8 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
     const headers = ['Grupo', 'Categoría', 'Estado', 'Código', 'Confirmados', 'Cupos', 'Restricciones Alimenticias'];
     const rows = guests.map(g => [
       g.groupName,
-      g.category,
-      g.rsvpStatus,
+      getGuestCategoryLabel(g.category),
+      getRsvpStatusLabel(g.rsvpStatus),
       g.rsvpCode,
       g.attendingCount,
       g.maxGuests,
@@ -94,6 +98,13 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
     return matchesSearch && matchesStatus && matchesClosed;
   });
 
+  const totalPages = Math.ceil(filteredGuests.length / pageSize);
+  const paginatedGuests = filteredGuests.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, showClosed, pageSize]);
+
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       pendiente: 'bg-stone-100 text-stone-500',
@@ -104,7 +115,7 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
     };
     return (
       <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${styles[status] || styles.pendiente}`}>
-        {status}
+        {getRsvpStatusLabel(status)}
       </span>
     );
   };
@@ -142,22 +153,26 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="bg-stone-100 rounded-2xl border border-stone-100 shadow-sm overflow-hidden grid grid-cols-2 lg:grid-cols-5 gap-px">
         {[
-          { label: 'Cupos Totales', value: metrics?.totalCupos || 0, icon: Users, color: 'text-stone-400' },
-          { label: 'Confirmados', value: metrics?.totalConfirmados || 0, icon: CheckCircle2, color: 'text-emerald-500' },
-          { label: 'Pendientes', value: metrics?.pendientes || 0, icon: Mail, color: 'text-amber-500' },
-          { label: 'Rechazados', value: metrics?.totalRechazados || 0, icon: X, color: 'text-rose-500' },
-          { label: 'Cerrados', value: metrics?.gruposCerrados || 0, icon: Lock, color: 'text-stone-800' },
+          { label: 'Cupos Totales', value: metrics?.totalCupos || 0, icon: Users, color: 'text-stone-500', bg: 'bg-stone-50' },
+          { label: 'Confirmados', value: metrics?.totalConfirmados || 0, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Pendientes', value: metrics?.pendientes || 0, icon: Mail, color: 'text-amber-600', bg: 'bg-amber-50' },
+          { label: 'Rechazados', value: metrics?.totalRechazados || 0, icon: X, color: 'text-rose-600', bg: 'bg-rose-50' },
+          { label: 'Cerrados', value: metrics?.gruposCerrados || 0, icon: Lock, color: 'text-stone-800', bg: 'bg-stone-200' },
         ].map((m, i) => (
-          <div key={i} className="bg-white p-6 rounded-3xl border border-stone-100 shadow-sm hover:shadow-md transition-all">
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-2 rounded-xl bg-stone-50 ${m.color}`}>
-                <m.icon size={16} />
+          <div key={i} className="bg-white p-4 flex flex-col h-full relative group transition-colors hover:bg-stone-50/50">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${m.bg} ${m.color}`}>
+                  <m.icon size={14} />
+                </div>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-stone-400">{m.label}</p>
               </div>
             </div>
-            <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1">{m.label}</p>
-            <p className="text-2xl font-bold text-[#0F1A2E] serif">{m.value}</p>
+            <div className="mt-auto">
+              <h4 className={`text-2xl font-bold serif leading-tight ${m.color}`}>{m.value}</h4>
+            </div>
           </div>
         ))}
       </div>
@@ -221,8 +236,8 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
             Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="h-48 bg-stone-100 rounded-3xl animate-pulse" />
             ))
-          ) : filteredGuests.length > 0 ? (
-            filteredGuests.map((guest) => (
+          ) : paginatedGuests.length > 0 ? (
+            paginatedGuests.map((guest) => (
               <div 
                 key={guest.id} 
                 className={`bg-white p-6 rounded-3xl border transition-all hover:shadow-lg group ${
@@ -232,7 +247,7 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-lg font-bold text-[#0F1A2E] serif mb-1">{guest.groupName}</h3>
-                    <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">{guest.category}</p>
+                    <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">{getGuestCategoryLabel(guest.category)}</p>
                   </div>
                   {getStatusBadge(guest.rsvpStatus)}
                 </div>
@@ -259,20 +274,20 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
                     <div className="flex gap-2">
                       <button 
                         onClick={() => handleCopyLink(guest.rsvpCode)}
-                        className="p-2.5 bg-stone-50 text-stone-400 rounded-xl hover:bg-[#C6A75E]/10 hover:text-[#C6A75E] transition-all"
+                        className="p-2.5 text-stone-600 hover:text-white hover:bg-stone-500 rounded-lg shadow-sm transition-all bg-stone-100 border border-stone-200"
                         title="Copiar Link"
                       >
-                        <Copy size={14} />
+                        <Copy size={16} />
                       </button>
                       <button 
                         onClick={() => {
                           setSelectedGuest(guest);
                           setIsModalOpen(true);
                         }}
-                        className="p-2.5 bg-[#0F1A2E] text-white rounded-xl hover:bg-opacity-90 transition-all"
+                        className="p-2.5 text-blue-700 hover:text-white hover:bg-blue-600 rounded-lg shadow-sm transition-all bg-blue-100 border border-blue-200"
                         title="Ver Detalle"
                       >
-                        <ChevronRight size={14} />
+                        <ChevronRight size={16} />
                       </button>
                     </div>
                   </div>
@@ -309,11 +324,11 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
                       <td colSpan={6} className="p-4"><div className="h-10 bg-stone-100 rounded-xl animate-pulse" /></td>
                     </tr>
                   ))
-                ) : filteredGuests.length > 0 ? (
-                  filteredGuests.map((guest) => (
+                ) : paginatedGuests.length > 0 ? (
+                  paginatedGuests.map((guest) => (
                     <tr key={guest.id} className={`border-b border-stone-50 hover:bg-stone-50/50 transition-colors ${guest.rsvpClosed ? 'opacity-75' : ''}`}>
                       <td className="p-4 font-bold text-[#0F1A2E] serif whitespace-nowrap">{guest.groupName}</td>
-                      <td className="p-4 text-[10px] font-bold text-stone-400 uppercase tracking-widest whitespace-nowrap">{guest.category}</td>
+                      <td className="p-4 text-[10px] font-bold text-stone-400 uppercase tracking-widest whitespace-nowrap">{getGuestCategoryLabel(guest.category)}</td>
                       <td className="p-4 whitespace-nowrap">{getStatusBadge(guest.rsvpStatus)}</td>
                       <td className="p-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
@@ -330,7 +345,7 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
                         <div className="flex justify-end gap-2">
                           <button 
                             onClick={() => handleCopyLink(guest.rsvpCode)}
-                            className="p-2 bg-white border border-stone-100 text-stone-400 rounded-lg hover:border-[#C6A75E] hover:text-[#C6A75E] transition-all shadow-sm"
+                            className="p-2 text-stone-600 hover:text-white hover:bg-stone-500 rounded-lg shadow-sm transition-all bg-stone-100 border border-stone-200"
                             title="Copiar Link"
                           >
                             <Copy size={14} />
@@ -340,7 +355,7 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
                               setSelectedGuest(guest);
                               setIsModalOpen(true);
                             }}
-                            className="p-2 bg-[#0F1A2E] text-white rounded-lg hover:bg-opacity-90 transition-all shadow-sm"
+                            className="p-2 text-blue-700 hover:text-white hover:bg-blue-600 rounded-lg shadow-sm transition-all bg-blue-100 border border-blue-200"
                             title="Ver Detalle"
                           >
                             <ChevronRight size={14} />
@@ -361,6 +376,94 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Pagination Controls */}
+          {filteredGuests.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-stone-100 bg-stone-50/30">
+              <div className="flex items-center gap-2 text-[10px] font-bold text-stone-500 uppercase tracking-widest">
+                <span>Mostrar</span>
+                <select 
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="px-2 py-1 bg-white border border-stone-200 rounded-lg outline-none focus:border-[#C6A75E] transition-all"
+                >
+                  {[10, 20, 50, 100].map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+                <span>por página</span>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="p-1.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-white hover:text-stone-800 disabled:opacity-50 disabled:hover:bg-transparent transition-all"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="p-1.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-white hover:text-stone-800 disabled:opacity-50 disabled:hover:bg-transparent transition-all"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Pagination Controls for Grid View */}
+      {viewMode === 'grid' && filteredGuests.length > 0 && (
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border border-stone-100 rounded-3xl bg-white shadow-sm">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-stone-500 uppercase tracking-widest">
+            <span>Mostrar</span>
+            <select 
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="px-2 py-1 bg-stone-50 border border-stone-200 rounded-lg outline-none focus:border-[#C6A75E] transition-all"
+            >
+              {[10, 20, 50, 100].map(size => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+            <span>por página</span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
+              Página {currentPage} de {totalPages}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 hover:text-stone-800 disabled:opacity-50 disabled:hover:bg-transparent transition-all"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="p-1.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 hover:text-stone-800 disabled:opacity-50 disabled:hover:bg-transparent transition-all"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -407,7 +510,7 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
                   <div>
                     <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-2 block">Estado RSVP</label>
                     <select 
-                      value={selectedGuest.rsvpStatus}
+                      value={parseRsvpStatusInput(selectedGuest.rsvpStatus)}
                       onChange={(e) => handleUpdateRsvp(selectedGuest.id, { rsvpStatus: e.target.value })}
                       className="w-full px-4 py-3 bg-stone-50 border-none rounded-2xl text-xs font-bold text-stone-600 focus:ring-2 focus:ring-[#C6A75E]/20 transition-all"
                     >
@@ -506,7 +609,7 @@ export const RsvpManager: React.FC<RsvpManagerProps> = ({ weddingId }) => {
                   {selectedGuest.members.length < selectedGuest.maxGuests && (
                     <button 
                       onClick={() => {
-                        const newMember = { name: 'Nuevo Invitado', ageCategory: 'Adulto', attending: null };
+                        const newMember = { name: 'Nuevo Invitado', ageCategory: 'adulto', attending: null };
                         handleUpdateGuestMembers(selectedGuest.id, [...selectedGuest.members, newMember]);
                       }}
                       className="w-full py-4 border-2 border-dashed border-stone-100 rounded-2xl text-[10px] font-bold text-stone-300 uppercase tracking-widest hover:border-[#C6A75E] hover:text-[#C6A75E] transition-all"

@@ -38,9 +38,6 @@ export const supabase = createClient(
       detectSessionInUrl: true,
       storage: window.localStorage,
       storageKey: 'endless-love-auth'
-    },
-    global: {
-      fetch: (input, init) => window.fetch(input, init)
     }
   }
 );

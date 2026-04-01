@@ -3,6 +3,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { ICONS, COLORS } from '../constants';
 import { Table, Guest, GuestMember } from '../types';
 import { Modal } from './Modal';
+import { getAgeCategoryLabel } from '../src/lib/guestMappers';
 import { 
   Search, RotateCcw, Maximize2, Trash2, Layers, ZoomIn, ZoomOut, 
   Maximize, UserCheck, UserMinus, Plus, MoveHorizontal, MoveVertical,
@@ -259,12 +260,28 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
         </div>
       </div>
 
-      {/* Strategic Metrics Header - More Compact */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 shrink-0 px-1">
-        <MetricBox label="Mesas" value={metrics.totalTables} icon={<Layers size={12} />} color="bg-stone-50" />
-        <MetricBox label="Capacidad" value={metrics.totalCapacity} icon={<Users size={12} />} color="bg-stone-50" />
-        <MetricBox label="Asignados" value={metrics.assignedCount} icon={<CheckCircle2 size={12} />} color="bg-emerald-50" textColor="text-emerald-700" />
-        <MetricBox label="Sin Mesa" value={metrics.unassignedCount} icon={<AlertTriangle size={12} />} color="bg-amber-50" textColor="text-amber-700" alert={metrics.unassignedCount > 0} />
+      {/* Strategic Metrics Header Unified */}
+      <div className="bg-stone-100 rounded-2xl border border-stone-100 shadow-sm overflow-hidden grid grid-cols-2 lg:grid-cols-4 gap-px mx-1 shrink-0">
+        {[
+          { label: 'Mesas', value: metrics.totalTables, icon: Layers, color: 'text-stone-500', bg: 'bg-stone-50' },
+          { label: 'Capacidad', value: metrics.totalCapacity, icon: Users, color: 'text-stone-800', bg: 'bg-stone-200' },
+          { label: 'Asignados', value: metrics.assignedCount, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Sin Mesa', value: metrics.unassignedCount, icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50', alert: metrics.unassignedCount > 0 },
+        ].map((m, i) => (
+          <div key={i} className="bg-white p-3 flex flex-col h-full relative group transition-colors hover:bg-stone-50/50">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <div className={`w-6 h-6 rounded-md flex items-center justify-center shadow-sm ${m.alert ? 'bg-amber-500 text-white animate-pulse' : m.bg + ' ' + m.color}`}>
+                  <m.icon size={12} />
+                </div>
+                <p className="text-[8px] font-bold uppercase tracking-widest text-stone-400">{m.label}</p>
+              </div>
+            </div>
+            <div className="mt-auto">
+              <h4 className={`text-lg font-bold serif leading-tight ${m.color}`}>{m.value}</h4>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Main Workspace - 100% Height Editor Layout */}
@@ -432,12 +449,12 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
                     {selectedTable.type}
                   </p>
                 </div>
-                <div className="flex gap-1">
-                  <button onClick={duplicateTable} title="Duplicar" className="p-1.5 text-stone-400 hover:text-[#0F1A2E] hover:bg-stone-50 rounded-md transition-all shadow-sm">
-                    <Copy size={12} />
+                <div className="flex gap-2">
+                  <button onClick={duplicateTable} title="Duplicar" className="p-2 text-blue-700 hover:text-white hover:bg-blue-600 rounded-lg shadow-sm transition-all bg-blue-100 border border-blue-200">
+                    <Copy size={14} />
                   </button>
-                  <button onClick={() => { onRemoveTable(selectedTableId!); setSelectedTableId(null); }} title="Eliminar" className="p-1.5 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all shadow-sm">
-                    <Trash2 size={12} />
+                  <button onClick={() => { onRemoveTable(selectedTableId!); setSelectedTableId(null); }} title="Eliminar" className="p-2 text-rose-700 hover:text-white hover:bg-rose-600 rounded-lg shadow-sm transition-all bg-rose-100 border border-rose-200">
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>
@@ -575,7 +592,7 @@ export const SeatingPlanner: React.FC<SeatingPlannerProps> = ({ tables, guests, 
                         </div>
                         <div className="text-left">
                            <p className="text-xs font-bold">{m.name}</p>
-                           <p className="text-[9px] font-bold uppercase tracking-tighter opacity-50 group-hover:opacity-100">{m.ageCategory}</p>
+                           <p className="text-[9px] font-bold uppercase tracking-tighter opacity-50 group-hover:opacity-100">{getAgeCategoryLabel(m.ageCategory)}</p>
                         </div>
                      </div>
                      <Plus size={16} className="text-[#C6A75E] opacity-0 group-hover:opacity-100 transition-all" />

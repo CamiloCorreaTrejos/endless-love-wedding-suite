@@ -1,5 +1,5 @@
 {
   "name": "Endless Love",
   "description": "Organizador de bodas con notificaciones push",
-  "requestFramePermissions": ["camera", "microphone", "geolocation"]
+  "requestFramePermissions": [""]
 }

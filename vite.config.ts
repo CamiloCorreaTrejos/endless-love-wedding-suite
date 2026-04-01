@@ -20,6 +20,8 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
+          'node-fetch': path.resolve(__dirname, './src/lib/node-fetch-browser.ts'),
+          'formdata-polyfill/esm.min.js': path.resolve(__dirname, './src/lib/formdata-polyfill-browser.ts'),
         }
       }
     };

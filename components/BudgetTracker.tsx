@@ -126,35 +126,28 @@ export const BudgetTracker: React.FC<BudgetTrackerProps> = ({ expenses, totalBud
         </button>
       </div>
 
-      {/* Strategic Metrics Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
-        <BudgetMetric 
-          label="Presupuesto" 
-          value={`$${totalBudget.toLocaleString()}`} 
-          icon={<Wallet size={18} />} 
-          color="bg-stone-50" 
-        />
-        <BudgetMetric 
-          label="Gastado" 
-          value={`$${metrics.totalSpent.toLocaleString()}`} 
-          icon={<TrendingUp size={18} />} 
-          color="bg-stone-50" 
-          status={metrics.isOverBudget ? 'error' : 'normal'}
-        />
-        <BudgetMetric 
-          label="Comprometido" 
-          value={`$${metrics.totalCommitted.toLocaleString()}`} 
-          icon={<CreditCard size={18} />} 
-          color="bg-stone-50" 
-        />
-        <BudgetMetric 
-          label="Disponible" 
-          value={`$${metrics.remaining.toLocaleString()}`} 
-          icon={<PieChart size={18} />} 
-          color={metrics.isNearLimit ? "bg-amber-50" : "bg-[#0F1A2E]"} 
-          dark={!metrics.isNearLimit}
-          status={metrics.isNearLimit ? 'warning' : 'normal'}
-        />
+      {/* Strategic Metrics Cards Unified */}
+      <div className="bg-stone-100 rounded-2xl border border-stone-100 shadow-sm overflow-hidden grid grid-cols-2 lg:grid-cols-4 gap-px">
+        {[
+          { label: 'Presupuesto', value: `$${totalBudget.toLocaleString()}`, icon: Wallet, color: 'text-stone-500', bg: 'bg-stone-50' },
+          { label: 'Gastado', value: `$${metrics.totalSpent.toLocaleString()}`, icon: TrendingUp, color: metrics.isOverBudget ? 'text-rose-600' : 'text-stone-800', bg: metrics.isOverBudget ? 'bg-rose-50' : 'bg-stone-200' },
+          { label: 'Comprometido', value: `$${metrics.totalCommitted.toLocaleString()}`, icon: CreditCard, color: 'text-amber-600', bg: 'bg-amber-50' },
+          { label: 'Disponible', value: `$${metrics.remaining.toLocaleString()}`, icon: PieChart, color: metrics.isNearLimit ? 'text-amber-600' : 'text-emerald-600', bg: metrics.isNearLimit ? 'bg-amber-50' : 'bg-emerald-50' },
+        ].map((m, i) => (
+          <div key={i} className="bg-white p-4 flex flex-col h-full relative group transition-colors hover:bg-stone-50/50">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${m.bg} ${m.color}`}>
+                  <m.icon size={14} />
+                </div>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-stone-400">{m.label}</p>
+              </div>
+            </div>
+            <div className="mt-auto">
+              <h4 className={`text-2xl font-bold serif leading-tight ${m.color}`}>{m.value}</h4>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Main Financial Progress Bar */}
@@ -242,15 +235,17 @@ export const BudgetTracker: React.FC<BudgetTrackerProps> = ({ expenses, totalBud
                     </div>
                   </td>
                   <td className="px-4 md:px-5 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1.5 md:opacity-0 group-hover:opacity-100 transition-all">
-                      <button className="text-stone-200 hover:text-[#C6A75E] transition-colors">
-                        <ICONS.Edit.type {...ICONS.Edit.props} size={12} />
+                    <div className="flex items-center justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        className="p-2 text-blue-700 hover:text-white hover:bg-blue-600 rounded-lg shadow-sm transition-all bg-blue-100 border border-blue-200" title="Editar"
+                      >
+                        <ICONS.Edit.type {...ICONS.Edit.props} size={14} />
                       </button>
                       <button 
                         onClick={() => onRemoveExpense(item.id)}
-                        className="text-stone-200 hover:text-rose-500 transition-colors"
+                        className="p-2 text-rose-700 hover:text-white hover:bg-rose-600 rounded-lg shadow-sm transition-all bg-rose-100 border border-rose-200" title="Eliminar"
                       >
-                        <ICONS.Trash.type {...ICONS.Trash.props} size={12} />
+                        <ICONS.Trash.type {...ICONS.Trash.props} size={14} />
                       </button>
                     </div>
                   </td>

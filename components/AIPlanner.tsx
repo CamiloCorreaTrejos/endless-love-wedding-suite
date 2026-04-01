@@ -51,8 +51,8 @@ export const AIPlanner: React.FC<AIPlannerProps> = ({ data }) => {
       let contextString = '';
       if (data) {
         const totalBudget = data.budget;
-        const totalSpent = data.vendors.reduce((acc, v) => acc + v.totalAmount, 0);
-        const totalPaid = data.vendors.reduce((acc, v) => acc + v.paidAmount, 0);
+        const totalSpent = data.expenses.reduce((acc, curr) => acc + curr.actual, 0);
+        const totalPaid = data.vendors.reduce((acc, curr) => acc + curr.paidAmount, 0);
         const confirmedGuests = data.guests.filter(g => g.confirmation === 'Sí').reduce((acc, g) => acc + g.members.length, 0);
         const pendingTasks = data.tasks.filter(t => !t.completed).length;
         

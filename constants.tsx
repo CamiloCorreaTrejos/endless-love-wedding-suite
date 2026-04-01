@@ -79,27 +79,35 @@ export const INITIAL_GUESTS = [
   { 
     id: 'inv-1', 
     groupName: 'Pareja Thompson', 
-    category: 'Amigo de Valentina', 
+    category: 'amigo_valentina', 
     members: [
-      { id: 'm1', name: 'Alicia Thompson', ageCategory: 'Adulto' as const },
-      { id: 'm2', name: 'John Thompson', ageCategory: 'Adulto' as const }
+      { id: 'm1', name: 'Alicia Thompson', ageCategory: 'adulto' },
+      { id: 'm2', name: 'John Thompson', ageCategory: 'adulto' }
     ],
-    status: 'Confirmado' as const, 
-    certainty: 'Seguro' as const, 
-    confirmation: 'Sí' as const 
+    status: 'confirmado', 
+    certainty: 'seguro', 
+    confirmation: 'si',
+    maxGuests: 2,
+    rsvpCode: 'THOMP1',
+    rsvpStatus: 'confirmado',
+    rsvpClosed: false
   },
   { 
     id: 'inv-2', 
     groupName: 'Familia Miller', 
-    category: 'Familia de Valentina', 
+    category: 'familia_valentina', 
     members: [
-      { id: 'm3', name: 'Roberto Miller', ageCategory: 'Adulto' as const },
-      { id: 'm4', name: 'Ana Miller', ageCategory: 'Adulto' as const },
-      { id: 'm5', name: 'Hijo Miller', ageCategory: 'Niño' as const }
+      { id: 'm3', name: 'Roberto Miller', ageCategory: 'adulto' },
+      { id: 'm4', name: 'Ana Miller', ageCategory: 'adulto' },
+      { id: 'm5', name: 'Hijo Miller', ageCategory: 'nino' }
     ],
-    status: 'Invitación Enviada' as const, 
-    certainty: 'Seguro' as const, 
-    confirmation: 'No' as const 
+    status: 'enviada', 
+    certainty: 'seguro', 
+    confirmation: 'no',
+    maxGuests: 3,
+    rsvpCode: 'MILLE2',
+    rsvpStatus: 'pendiente',
+    rsvpClosed: false
   }
 ];
 
@@ -148,5 +156,5 @@ export const VENDOR_CATEGORIES = [
 ];
 
 export const GUEST_CATEGORIES = [
-  'Familia de Camilo', 'Familia de Valentina', 'Amigo de Camilo', 'Amigo de Valentina'
+  'Familia de Camilo', 'Familia de Valentina', 'Amigo de Camilo', 'Amigo de Valentina', 'Amigo de la Familia de Camilo', 'Amigo de la Familia de Valentina', 'Novios', 'Amigo de ambos'
 ];

@@ -2,7 +2,7 @@
 export interface GuestMember {
   id: string;
   name: string;
-  ageCategory: 'Adulto' | 'Niño';
+  ageCategory: string; // 'adulto' | 'nino' | 'bebe'
   isUnknown?: boolean;
   tableId?: string;
   attending?: boolean | null;
@@ -14,16 +14,16 @@ export interface GuestMember {
 export interface Guest {
   id: string;
   groupName: string;
-  category: 'Familia de Camilo' | 'Familia de Valentina' | 'Amigo de Camilo' | 'Amigo de Valentina' | string;
+  category: string; // 'familia_camilo' | 'familia_valentina' | 'amigo_camilo' | 'amigo_valentina' | 'amigo_familia_camilo' | 'amigo_familia_valentina' | 'novios' | 'amigo_ambos' | 'otros'
   members: GuestMember[];
-  status: 'Pendiente' | 'Invitación Enviada' | 'Confirmado' | 'Cancelado';
-  confirmation: 'Sí' | 'No';
-  certainty: 'Seguro' | 'Tal vez';
+  status: string; // 'pendiente' | 'enviada' | 'confirmado' | 'cancelado'
+  confirmation: string; // 'si' | 'no'
+  certainty: string; // 'seguro' | 'tal_vez' | 'pendiente'
   dietary?: string;
   tableId?: string;
   maxGuests: number;
   rsvpCode: string;
-  rsvpStatus: 'pendiente' | 'parcial' | 'confirmado' | 'rechazado' | 'cerrado';
+  rsvpStatus: string; // 'pendiente' | 'parcial' | 'confirmado' | 'rechazado' | 'cerrado'
   rsvpSubmittedAt?: string;
   rsvpClosed: boolean;
 }

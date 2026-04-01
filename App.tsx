@@ -421,14 +421,14 @@ const AppContent: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'notifications': return <NotificationsPage />;
-      case 'dashboard': return <Dashboard data={weddingData} />;
+      case 'dashboard': return <Dashboard data={weddingData} setActiveTab={setActiveTab} />;
       case 'guests': return <GuestList guests={weddingData.guests} tables={weddingData.tables} onAddGuest={handleAddGuest} onRemoveGuest={handleRemoveGuest} onUpdateGuest={handleUpdateGuest} />;
       case 'seating': return <SeatingPlanner tables={weddingData.tables} guests={weddingData.guests} onUpdateTable={handleUpdateTable} onAddTable={handleAddTable} onRemoveTable={handleRemoveTable} onAssignGuest={handleAssignGuestToTable} />;
       case 'rsvp': return weddingId ? <RsvpManager weddingId={weddingId} /> : null;
       case 'vendors': return <VendorManager vendors={weddingData.vendors} onAddVendor={handleAddVendor} onUpdateVendor={handleUpdateVendor} onRemoveVendor={handleRemoveVendor} />;
       case 'budget': return <BudgetTracker expenses={weddingData.expenses} totalBudget={weddingData.budget} onAddExpense={handleAddExpense} onUpdateBudget={handleUpdateBudget} onRemoveExpense={handleRemoveExpense} />;
       case 'tasks': return <TaskList tasks={weddingData.tasks} onToggleTask={handleToggleTask} onAddTask={handleAddTask} onUpdateTask={handleUpdateTask} onRemoveTask={handleRemoveTask} />;
-      default: return <Dashboard data={weddingData} />;
+      default: return <Dashboard data={weddingData} setActiveTab={setActiveTab} />;
     }
   };
 

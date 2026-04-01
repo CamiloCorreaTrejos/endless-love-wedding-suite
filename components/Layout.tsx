@@ -167,7 +167,7 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 space-y-0.5 mt-2 overflow-y-auto custom-sidebar-scroll">
+      <nav className="flex-1 px-3 space-y-0 mt-2 overflow-y-auto custom-sidebar-scroll">
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
           return (
@@ -177,7 +177,7 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
                   setActiveTab(item.id);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative overflow-hidden ${
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all relative overflow-hidden ${
                   isActive 
                     ? 'text-white font-bold shadow-md shadow-[#0F1A2E]/10 z-10' 
                     : 'text-stone-500 hover:bg-stone-50 hover:text-stone-800'
@@ -323,7 +323,7 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
         <div className="md:hidden p-4 flex items-center justify-between border-b bg-white sticky top-0 z-30">
            <div className="flex items-center gap-2">
              <button 
-               onClick={() => setIsMobileMenuOpen(true)}
+               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                className="p-2 -ml-2 text-stone-500 hover:bg-stone-50 rounded-xl"
              >
                <Menu size={20} />

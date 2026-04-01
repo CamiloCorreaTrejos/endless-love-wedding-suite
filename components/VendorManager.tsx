@@ -14,7 +14,7 @@ interface VendorManagerProps {
 }
 
 export const VendorManager: React.FC<VendorManagerProps> = ({ vendors, onAddVendor, onUpdateVendor, onRemoveVendor }) => {
-  const [viewType, setViewType] = useState<'grid' | 'table'>('grid');
+  const [viewType, setViewType] = useState<'grid' | 'table'>('table');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -130,12 +130,28 @@ export const VendorManager: React.FC<VendorManagerProps> = ({ vendors, onAddVend
         </button>
       </div>
 
-      {/* Summary Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <MetricCard label="Total" value={totalVendors} icon={<Briefcase className="text-stone-400" />} color="bg-stone-50" />
-        <MetricCard label="Contratados" value={contractedVendors} icon={<CheckCircle2 className="text-emerald-500" />} color="bg-emerald-50" badgeColor="text-emerald-600" />
-        <MetricCard label="Pendientes" value={pendingVendors} icon={<Filter className="text-amber-500" />} color="bg-amber-50" badgeColor="text-amber-600" />
-        <MetricCard label="Pagos" value={`$${pendingPayments.toLocaleString()}`} icon={<AlertCircle className="text-rose-500" />} color="bg-rose-50" badgeColor="text-rose-600" />
+      {/* Summary Metrics Unified */}
+      <div className="bg-stone-100 rounded-2xl border border-stone-100 shadow-sm overflow-hidden grid grid-cols-2 lg:grid-cols-4 gap-px">
+        {[
+          { label: 'Total', value: totalVendors, icon: Briefcase, color: 'text-stone-500', bg: 'bg-stone-50' },
+          { label: 'Contratados', value: contractedVendors, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Pendientes', value: pendingVendors, icon: Filter, color: 'text-amber-600', bg: 'bg-amber-50' },
+          { label: 'Pagos', value: `$${pendingPayments.toLocaleString()}`, icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+        ].map((m, i) => (
+          <div key={i} className="bg-white p-4 flex flex-col h-full relative group transition-colors hover:bg-stone-50/50">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${m.bg} ${m.color}`}>
+                  <m.icon size={14} />
+                </div>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-stone-400">{m.label}</p>
+              </div>
+            </div>
+            <div className="mt-auto">
+              <h4 className={`text-2xl font-bold serif leading-tight ${m.color}`}>{m.value}</h4>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Toolbar */}
@@ -241,9 +257,11 @@ export const VendorManager: React.FC<VendorManagerProps> = ({ vendors, onAddVend
                       <StatusBadge status={vendor.status} />
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      <button onClick={() => openEditModal(vendor)} className="p-1.5 text-stone-300 hover:text-[#C6A75E] hover:bg-white rounded-md transition-all md:opacity-0 group-hover:opacity-100">
-                        <Edit2 size={14} />
-                      </button>
+                      <div className="flex items-center justify-end gap-2 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => openEditModal(vendor)} className="p-2 text-blue-700 hover:text-white hover:bg-blue-600 rounded-lg shadow-sm transition-all bg-blue-100 border border-blue-200" title="Editar">
+                          <Edit2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -491,7 +509,7 @@ const VendorCard: React.FC<{ vendor: Vendor, onEdit: (v: Vendor) => void }> = ({
           </span>
           <h3 className="text-lg font-bold text-stone-800 leading-tight group-hover:text-[#C6A75E] transition-colors">{vendor.name}</h3>
         </div>
-        <button onClick={() => onEdit(vendor)} className="p-2 text-stone-200 hover:text-stone-800 transition-colors bg-stone-50 rounded-xl group-hover:bg-white group-hover:shadow-sm">
+        <button onClick={() => onEdit(vendor)} className="p-2 text-blue-700 hover:text-white hover:bg-blue-600 rounded-lg shadow-sm transition-all bg-blue-100 border border-blue-200" title="Editar">
           <Edit2 size={14} />
         </button>
       </div>
