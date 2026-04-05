@@ -29,6 +29,11 @@ export const CERTAINTY_MAP: Record<string, string> = {
   pendiente: 'Pendiente'
 };
 
+export const CONFIRMATION_MAP: Record<string, string> = {
+  si: 'Sí',
+  no: 'No'
+};
+
 export const RSVP_STATUS_MAP: Record<string, string> = {
   pendiente: 'Pendiente',
   parcial: 'Parcial',
@@ -70,6 +75,7 @@ const REVERSE_AGE_CATEGORY_MAP = createReverseMap(AGE_CATEGORY_MAP);
 const REVERSE_GUEST_CATEGORY_MAP = createReverseMap(GUEST_CATEGORY_MAP);
 const REVERSE_STATUS_MAP = createReverseMap(STATUS_MAP);
 const REVERSE_CERTAINTY_MAP = createReverseMap(CERTAINTY_MAP);
+const REVERSE_CONFIRMATION_MAP = createReverseMap(CONFIRMATION_MAP);
 const REVERSE_RSVP_STATUS_MAP = createReverseMap(RSVP_STATUS_MAP);
 
 // Getters (Value -> Label)
@@ -77,6 +83,7 @@ export const getAgeCategoryLabel = (value: string): string => AGE_CATEGORY_MAP[v
 export const getGuestCategoryLabel = (value: string): string => GUEST_CATEGORY_MAP[value] || value;
 export const getStatusLabel = (value: string): string => STATUS_MAP[value] || value;
 export const getCertaintyLabel = (value: string): string => CERTAINTY_MAP[value] || value;
+export const getConfirmationLabel = (value: string): string => CONFIRMATION_MAP[value] || value;
 export const getRsvpStatusLabel = (value: string): string => RSVP_STATUS_MAP[value] || value;
 
 // Parsers (Label or Value -> Value)
@@ -139,6 +146,18 @@ export const parseCertaintyInput = (input: string): string => {
   if (normalized.includes('pend')) return 'pendiente';
   
   return 'seguro';
+};
+
+export const parseConfirmationInput = (input: string): string => {
+  if (!input) return 'no';
+  const normalized = normalizeString(input);
+  if (CONFIRMATION_MAP[input]) return input;
+  if (CONFIRMATION_MAP[normalized]) return normalized;
+  if (REVERSE_CONFIRMATION_MAP[normalized]) return REVERSE_CONFIRMATION_MAP[normalized];
+  
+  if (normalized === 'si' || normalized === 's') return 'si';
+  
+  return 'no';
 };
 
 export const parseRsvpStatusInput = (input: string): string => {

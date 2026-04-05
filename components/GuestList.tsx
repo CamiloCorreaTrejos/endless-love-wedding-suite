@@ -7,8 +7,8 @@ import { Modal } from './Modal';
 // Added Plus to the lucide-react imports to fix the error on line 369
 import { LayoutPanelTop, Search, Filter, UserPlus, Users2, MoreHorizontal, ArrowUpRight, Plus, Download, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { 
-  getAgeCategoryLabel, getGuestCategoryLabel, getStatusLabel, getCertaintyLabel, getRsvpStatusLabel,
-  parseAgeCategoryInput, parseGuestCategoryInput, parseStatusInput, parseCertaintyInput, parseRsvpStatusInput
+  getAgeCategoryLabel, getGuestCategoryLabel, getStatusLabel, getCertaintyLabel, getRsvpStatusLabel, getConfirmationLabel,
+  parseAgeCategoryInput, parseGuestCategoryInput, parseStatusInput, parseCertaintyInput, parseRsvpStatusInput, parseConfirmationInput
 } from '../src/lib/guestMappers';
 
 interface GuestListProps {
@@ -72,7 +72,7 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
     setCategory(guest.category);
     setCertainty(guest.certainty);
     setStatus(guest.status);
-    setConfirmation(guest.confirmation);
+    setConfirmation(parseConfirmationInput(guest.confirmation));
     setRsvpStatus(guest.rsvpStatus || 'pendiente');
     setMembers(guest.members.map(m => ({ ...m })));
     setEntryType(guest.members.length === 1 ? 'Solo' : (guest.members.length === 2 ? 'Pareja' : 'Grupo Familiar'));
@@ -241,7 +241,8 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
         age_category: 'Adulto',
         category: 'Familia de Camilo',
         certainty: 'Seguro',
-        status: 'Pendiente'
+        status: 'Pendiente',
+        confirmation: 'No'
       }
     ];
 
@@ -283,7 +284,7 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
               category: parseGuestCategoryInput(row.category || row.Categoría || 'Familia de Camilo'),
               certainty: parseCertaintyInput(row.certainty || row.Certeza || 'Seguro'),
               status: parseStatusInput(row.status || row.Estado || 'Pendiente'),
-              confirmation: 'no',
+              confirmation: parseConfirmationInput(row.confirmation || row.Confirmación || row.Confirmacion || 'no'),
               rsvpStatus: 'pendiente',
               rsvpClosed: false,
               members: []
@@ -335,6 +336,7 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
             'Categoría': getGuestCategoryLabel(guest.category) || '',
             'Certeza': getCertaintyLabel(guest.certainty) || '',
             'Estado': getStatusLabel(guest.status) || '',
+            'Confirmación': getConfirmationLabel(guest.confirmation) || '',
             'Código RSVP': guest.rsvpCode || '',
             'Estado RSVP': getRsvpStatusLabel(guest.rsvpStatus) || '',
             'Cupos Máximos': guest.maxGuests || 0,
@@ -536,11 +538,12 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
           <table className="w-full text-left min-w-[800px]">
             <thead className="bg-stone-50/50 border-b border-stone-100">
               <tr className="text-[9px] uppercase font-bold text-stone-400 tracking-widest">
-                <th className="px-4 py-2.5 w-[40%]">Invitados</th>
+                <th className="px-4 py-2.5 w-[30%]">Invitados</th>
                 <th className="px-4 py-2.5 w-[12%]">Categoría</th>
                 <th className="px-4 py-2.5 w-[12%]">Asignación</th>
                 <th className="px-4 py-2.5 w-[10%]">Certeza</th>
-                <th className="px-4 py-2.5 w-[10%]">Estado invitación</th>
+                <th className="px-4 py-2.5 w-[10%]">Estado</th>
+                <th className="px-4 py-2.5 w-[10%]">Confirmación</th>
                 <th className="px-4 py-2.5 w-[10%] text-center">RSVP</th>
                 <th className="px-4 py-2.5 w-[6%] text-right"></th>
               </tr>
@@ -621,6 +624,16 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
                         <option value="enviada">Enviada</option>
                         <option value="confirmado">Confirmado</option>
                         <option value="cancelado">Cancelado</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <select 
+                        value={parseConfirmationInput(inv.confirmation)} 
+                        onChange={(e) => onUpdateGuest(inv.id, { confirmation: e.target.value })}
+                        className={`text-[9px] font-bold uppercase rounded-xl px-2 py-1.5 outline-none border transition-all ${parseConfirmationInput(inv.confirmation) === 'si' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-stone-100 text-stone-500 border-stone-200'}`}
+                      >
+                        <option value="si">Sí</option>
+                        <option value="no">No</option>
                       </select>
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -844,7 +857,7 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
             ))}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 pt-6 border-t border-stone-50">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 md:gap-4 pt-6 border-t border-stone-50">
             <div className="space-y-1.5">
               <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest ml-1">Certeza</label>
               <select 
@@ -866,6 +879,16 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
                 <option value="enviada">Enviada</option>
                 <option value="confirmado">Confirmado</option>
                 <option value="cancelado">Cancelado</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest ml-1">Confirmación</label>
+              <select 
+                value={parseConfirmationInput(confirmation)} onChange={e => setConfirmation(e.target.value)}
+                className="w-full px-3 py-2.5 bg-stone-50 border border-stone-100 rounded-xl text-[9px] font-bold uppercase text-stone-800 outline-none focus:border-[#C6A75E] focus:bg-white"
+              >
+                <option value="si">Sí</option>
+                <option value="no">No</option>
               </select>
             </div>
             <div className="space-y-1.5">

@@ -38,7 +38,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setActiveTab }) => {
   const metrics = useMemo(() => {
     const allMembers = data.guests.flatMap(g => g.members);
     const confirmedCount = data.guests
-      .filter(inv => inv.confirmation === 'Sí')
+      .filter(inv => inv.confirmation === 'si')
       .reduce((acc, inv) => acc + inv.members.length, 0);
     
     const assignedIds = new Set(data.tables.flatMap(t => t.assignedGuestIds));

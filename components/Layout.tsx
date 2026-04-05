@@ -46,7 +46,7 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
     
     // Invitados
     const allMembers = data.guests.flatMap(g => g.members);
-    const pendingRSVP = data.guests.filter(g => g.confirmation === 'No').length;
+    const pendingRSVP = data.guests.filter(g => g.confirmation === 'no').length;
     
     // Mesas
     const assignedIds = new Set(data.tables.flatMap(t => t.assignedGuestIds).filter(id => id !== ''));
@@ -68,7 +68,7 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
 
     // Progreso General (Promedio de 3 pilares)
     const taskProgress = data.tasks.length > 0 ? (data.tasks.filter(t => t.completed).length / data.tasks.length) * 100 : 0;
-    const guestProgress = data.guests.length > 0 ? (data.guests.filter(g => g.confirmation === 'Sí').length / data.guests.length) * 100 : 0;
+    const guestProgress = data.guests.length > 0 ? (data.guests.filter(g => g.confirmation === 'si').length / data.guests.length) * 100 : 0;
     const vendorProgress = (data.vendors.filter(v => v.status === 'Contratado').length / 10) * 100; // Asumiendo 10 categorías clave
     const overallProgress = Math.round((taskProgress + guestProgress + Math.min(100, vendorProgress)) / 3);
 

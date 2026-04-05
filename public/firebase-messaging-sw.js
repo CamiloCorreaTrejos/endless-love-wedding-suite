@@ -28,9 +28,21 @@ self.addEventListener("message", (event) => {
 });
 
 messaging.onBackgroundMessage((payload) => {
-  const title = payload?.notification?.title || "Endless Love";
+  console.log('[SW] onBackgroundMessage received', payload);
+
+  // Si el payload ya trae notification, el navegador (FCM) lo va a mostrar automáticamente.
+  // No debemos llamar a showNotification para evitar duplicados.
+  if (payload.notification) {
+    console.log('PUSH_SW_DUPLICATE_PREVENTED: Payload contains notification object, letting browser handle it.');
+    return;
+  }
+
+  console.log('PUSH_EDGE_DATA_ONLY_MODE: Payload is data-only, showing notification manually.');
+  console.log('PUSH_SW_SHOW_NOTIFICATION');
+
+  const title = payload?.data?.title || "Endless Love";
   const options = {
-    body: payload?.notification?.body || "Tienes una nueva notificación.",
+    body: payload?.data?.message || "Tienes una nueva notificación.",
     icon: "/pwa-192.png",
     badge: "/pwa-192.png",
     data: payload?.data || {},
@@ -40,6 +52,6 @@ messaging.onBackgroundMessage((payload) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification?.data?.url || "/notificaciones";
+  const url = event.notification?.data?.link || event.notification?.data?.url || "/notificaciones";
   event.waitUntil(clients.openWindow(url));
 });

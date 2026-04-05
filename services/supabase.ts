@@ -2,7 +2,7 @@
 import { createAndDispatchNotification } from './notifications';
 import { supabase } from "../src/lib/supabaseClient";
 import { Guest, Table, BudgetItem, Task, Vendor, GuestMember, NotificationItem } from "../types";
-import { parseAgeCategoryInput, parseGuestCategoryInput, parseStatusInput, parseCertaintyInput, parseRsvpStatusInput } from '../src/lib/guestMappers';
+import { parseAgeCategoryInput, parseGuestCategoryInput, parseStatusInput, parseCertaintyInput, parseRsvpStatusInput, parseConfirmationInput } from '../src/lib/guestMappers';
 
 export { supabase };
 
@@ -28,7 +28,7 @@ export const mapGuestRowToUI = (row: any): Guest => ({
   category: parseGuestCategoryInput(row.category ?? 'familia_camilo'),
   status: parseStatusInput(row.status ?? 'pendiente'),
   certainty: parseCertaintyInput(row.certainty ?? 'seguro'),
-  confirmation: row.confirmation ?? 'no',
+  confirmation: parseConfirmationInput(row.confirmation ?? 'no'),
   dietary: row.dietary_notes ?? '',
   members: (row.guest_members ?? []).map(mapGuestMemberRowToUI),
   maxGuests: row.max_guests ?? 1,
@@ -96,7 +96,7 @@ export const mapGuestUIToInsertPayload = (guest: Omit<Guest, 'id'>, weddingId: s
   category: normalizeValue(parseGuestCategoryInput(guest.category)),
   status: normalizeValue(parseStatusInput(guest.status)),
   certainty: normalizeValue(parseCertaintyInput(guest.certainty)),
-  confirmation: normalizeValue(guest.confirmation),
+  confirmation: normalizeValue(parseConfirmationInput(guest.confirmation)),
   dietary_notes: normalizeValue(guest.dietary),
   max_guests: guest.maxGuests ?? 1,
   rsvp_code: normalizeValue(guest.rsvpCode),
@@ -110,7 +110,7 @@ export const mapGuestUIToUpdatePatch = (updates: Partial<Guest>) => {
   if (updates.category !== undefined) patch.category = normalizeValue(parseGuestCategoryInput(updates.category));
   if (updates.status !== undefined) patch.status = normalizeValue(parseStatusInput(updates.status));
   if (updates.certainty !== undefined) patch.certainty = normalizeValue(parseCertaintyInput(updates.certainty));
-  if (updates.confirmation !== undefined) patch.confirmation = normalizeValue(updates.confirmation);
+  if (updates.confirmation !== undefined) patch.confirmation = normalizeValue(parseConfirmationInput(updates.confirmation));
   if (updates.dietary !== undefined) patch.dietary_notes = normalizeValue(updates.dietary);
   if (updates.maxGuests !== undefined) patch.max_guests = updates.maxGuests;
   
