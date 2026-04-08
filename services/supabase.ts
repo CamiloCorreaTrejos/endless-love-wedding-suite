@@ -303,6 +303,17 @@ export const createGuest = async (guest: Omit<Guest, 'id'>, weddingId: string) =
     }
 
     console.log("CREATE_GUEST_OK", { id: newGuest.id });
+    
+    await createAndDispatchNotification(
+      weddingId,
+      null,
+      'general',
+      'Nuevo invitado añadido',
+      `Se añadió el grupo: ${newGuest.name}`,
+      'info',
+      '/?section=guests'
+    );
+
     return { data: newGuest, error: null };
   } catch (error: any) {
     console.error("CREATE_GUEST_ERROR", error);
@@ -393,6 +404,20 @@ export const updateGuest = async (guestId: string, updates: Partial<Guest>, wedd
     }
 
     console.log("UPDATE_GUEST_OK");
+
+    // If status changed to confirmed/rejected, notify
+    if (updates.rsvpStatus === 'confirmado' || updates.rsvpStatus === 'rechazado') {
+      await createAndDispatchNotification(
+        weddingId,
+        null,
+        'rsvp_update',
+        'RSVP Actualizado manualmente',
+        `Un invitado fue marcado como ${updates.rsvpStatus}`,
+        'info',
+        '/?section=guests'
+      );
+    }
+
     return { error: null };
   } catch (error: any) {
     console.error("UPDATE_GUEST_ERROR", error);
@@ -627,6 +652,17 @@ export const createVendor = async (vendor: Omit<Vendor, 'id'> & { pdfFile?: File
     }
 
     console.log("CREATE_VENDOR_OK", { id: finalVendor.id, hasPdf: !!finalVendor.pdfUrl });
+    
+    await createAndDispatchNotification(
+      weddingId,
+      null,
+      'general',
+      'Nuevo proveedor añadido',
+      `Se añadió el proveedor: ${finalVendor.name}`,
+      'info',
+      '/?section=vendors'
+    );
+
     return { data: finalVendor, error: null };
   } catch (error: any) {
     console.error("CREATE_VENDOR_ERROR", error);
@@ -703,7 +739,18 @@ export const createBudgetItem = async (item: Omit<BudgetItem, 'id'>, weddingId: 
   const payload = mapBudgetItemUIToInsertPayload(item, weddingId);
   const { data, error } = await supabase!.from('budget_items').insert([payload]).select().single();
   if (error) console.error("CREATE_BUDGET_ITEM_ERROR", error);
-  else console.log("CREATE_BUDGET_ITEM_OK", { id: data.id });
+  else {
+    console.log("CREATE_BUDGET_ITEM_OK", { id: data.id });
+    await createAndDispatchNotification(
+      weddingId,
+      null,
+      'budget_alert',
+      'Nuevo gasto añadido',
+      `Se añadió el gasto: ${item.item}`,
+      'info',
+      '/?section=budget'
+    );
+  }
   return { data, error };
 };
 
@@ -760,7 +807,7 @@ export const createTask = async (task: Omit<Task, 'id'>, weddingId: string) => {
       'Nueva tarea creada',
       `Se creó la tarea: ${task.title}`,
       'info',
-      '/?section=tareas'
+      '/?section=tasks'
     );
   }
   return { data, error };
@@ -787,7 +834,7 @@ export const updateTask = async (taskId: string, updates: Partial<Task>, wedding
           'Tarea completada',
           `La tarea "${taskData.title}" fue completada`,
           'info',
-          '/?section=tareas'
+          '/?section=tasks'
         );
       }
     }
@@ -1003,7 +1050,7 @@ export const submitRsvpResponse = async (guestId: string, members: any[], rsvpSt
         title,
         message,
         severity,
-        '/?section=confirmaciones'
+        '/?section=rsvp'
       );
     }
 
@@ -1116,24 +1163,17 @@ export const createNotification = async (payload: Omit<NotificationItem, 'id' | 
   console.log("CREATE_NOTIF_START", { payload, weddingId });
   
   try {
-    const { data, error } = await supabase!
-      .from('notifications')
-      .insert({
-        wedding_id: weddingId,
-        user_id: payload.userId,
-        title: payload.title,
-        message: payload.message,
-        type: payload.type,
-        severity: payload.severity,
-        link: payload.link,
-        is_read: false
-      })
-      .select()
-      .single();
+    await createAndDispatchNotification(
+      weddingId,
+      payload.userId || null,
+      payload.type as any,
+      payload.title,
+      payload.message,
+      payload.severity,
+      payload.link || '/?section=notificaciones'
+    );
     
-    if (error) throw error;
-    console.log("CREATE_NOTIF_OK");
-    return { data: mapNotificationRowToUI(data), error: null };
+    return { data: null, error: null }; // createAndDispatchNotification doesn't return the notif object easily here without refactor, but it's fine for this usage
   } catch (error: any) {
     console.error("CREATE_NOTIF_ERROR", error);
     return { data: null, error };

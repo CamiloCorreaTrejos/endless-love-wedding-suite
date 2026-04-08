@@ -12,6 +12,7 @@ import { createAndDispatchNotification } from './services/notifications';
 import { PublicRsvp } from './components/PublicRsvp';
 import { NotificationsPage } from './components/NotificationsPage';
 import { ToastContainer } from './components/ToastContainer';
+import { WhatsAppButton } from './components/WhatsAppButton';
 import { Login } from './components/Login';
 import { ElegantLoader } from './components/ElegantLoader';
 import { AlertCircle } from 'lucide-react';
@@ -420,7 +421,7 @@ const AppContent: React.FC = () => {
   // --- Notifications Route Detection ---
   const renderContent = () => {
     switch (activeTab) {
-      case 'notifications': return <NotificationsPage />;
+      case 'notifications': return <NotificationsPage setActiveTab={setActiveTab} />;
       case 'dashboard': return <Dashboard data={weddingData} setActiveTab={setActiveTab} />;
       case 'guests': return <GuestList guests={weddingData.guests} tables={weddingData.tables} onAddGuest={handleAddGuest} onRemoveGuest={handleRemoveGuest} onUpdateGuest={handleUpdateGuest} />;
       case 'seating': return <SeatingPlanner tables={weddingData.tables} guests={weddingData.guests} onUpdateTable={handleUpdateTable} onAddTable={handleAddTable} onRemoveTable={handleRemoveTable} onAssignGuest={handleAssignGuestToTable} />;

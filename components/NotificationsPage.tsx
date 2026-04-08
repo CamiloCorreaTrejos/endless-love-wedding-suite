@@ -23,7 +23,11 @@ import { es } from 'date-fns/locale';
 import { isPushSupported, requestNotificationPermission, getFcmToken } from '../src/lib/push';
 import { createNotification, upsertNotificationToken } from '../services/supabase';
 
-export const NotificationsPage: React.FC = () => {
+interface NotificationsPageProps {
+  setActiveTab?: (tab: string) => void;
+}
+
+export const NotificationsPage: React.FC<NotificationsPageProps> = ({ setActiveTab }) => {
   const { notifications, markRead, markAllRead, loading, refetch } = useNotifications();
   const { userProfile } = useAuth();
   const [filter, setFilter] = useState('all');
@@ -34,6 +38,45 @@ export const NotificationsPage: React.FC = () => {
 
   const weddingId = userProfile?.wedding_id || '';
   const userId = userProfile?.id;
+
+  const handleNavigate = (e: React.MouseEvent, link: string) => {
+    e.preventDefault();
+    if (!setActiveTab) {
+      window.location.href = link;
+      return;
+    }
+
+    // Parse link to find section
+    const normalizedLink = link.toLowerCase().trim();
+    let sectionParam = '';
+    try {
+      const url = new URL(normalizedLink, 'http://dummy.com');
+      sectionParam = url.searchParams.get('section') || '';
+    } catch (err) {
+      // ignore
+    }
+
+    const target = sectionParam || normalizedLink.replace(/^\/+|\/+$/g, '');
+    const sectionMap: Record<string, string> = {
+      'tasks': 'tasks', 'tareas': 'tasks',
+      'rsvp': 'rsvp', 'confirmaciones': 'rsvp',
+      'vendors': 'vendors', 'proveedores': 'vendors',
+      'budget': 'budget', 'presupuesto': 'budget',
+      'guests': 'guests', 'invitados': 'guests',
+      'seating': 'seating', 'plano-de-mesas': 'seating',
+      'dashboard': 'dashboard',
+      'notifications': 'notifications', 'notificaciones': 'notifications'
+    };
+
+    const resolvedTab = sectionMap[target];
+    if (resolvedTab) {
+      setActiveTab(resolvedTab);
+      const newUrl = resolvedTab === 'dashboard' ? '/' : `/?section=${resolvedTab}`;
+      window.history.pushState({}, '', newUrl);
+    } else {
+      window.location.href = link;
+    }
+  };
 
   useEffect(() => {
     if (!isPushSupported()) {
@@ -297,7 +340,11 @@ export const NotificationsPage: React.FC = () => {
                       </div>
                       {!n.isRead && (
                         <button 
-                          onClick={() => markRead(n.id, weddingId)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            markRead(n.id, weddingId);
+                          }}
                           className="p-2 bg-stone-50 text-stone-400 rounded-xl hover:bg-emerald-50 hover:text-emerald-500 transition-all"
                           title="Marcar como leída"
                         >
@@ -311,6 +358,7 @@ export const NotificationsPage: React.FC = () => {
                     {n.link && (
                       <a 
                         href={n.link}
+                        onClick={(e) => handleNavigate(e, n.link)}
                         className="inline-flex items-center gap-2 text-[10px] font-bold text-[#C6A75E] uppercase tracking-widest hover:text-[#0F1A2E] transition-colors"
                       >
                         Ver detalle

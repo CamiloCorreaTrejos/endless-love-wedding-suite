@@ -37,12 +37,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setActiveTab }) => {
   // Strategic Calculations
   const metrics = useMemo(() => {
     const allMembers = data.guests.flatMap(g => g.members);
-    const confirmedCount = data.guests
-      .filter(inv => inv.confirmation === 'si')
-      .reduce((acc, inv) => acc + inv.members.length, 0);
+    const confirmedMembers = allMembers.filter(m => m.attending === true).length;
+    const rejectedMembers = allMembers.filter(m => m.attending === false).length;
+    const pendingMembers = allMembers.filter(m => m.attending === undefined || m.attending === null).length;
     
     const assignedIds = new Set(data.tables.flatMap(t => t.assignedGuestIds));
-    const unseatedCount = allMembers.filter(m => !assignedIds.has(m.id)).length;
+    const unseatedConfirmedCount = allMembers.filter(m => m.attending === true && !assignedIds.has(m.id)).length;
 
     const totalBudget = data.budget;
     const committedBudget = data.expenses.reduce((acc, curr) => acc + curr.estimated, 0);
@@ -61,8 +61,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setActiveTab }) => {
 
     return {
       allMembers,
-      confirmedCount,
-      unseatedCount,
+      confirmedCount: confirmedMembers,
+      pendingCount: pendingMembers,
+      unseatedCount: unseatedConfirmedCount,
       totalBudget,
       committedBudget,
       totalPaid,
@@ -230,7 +231,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, setActiveTab }) => {
           icon={<Users size={14} />} 
           title="Invitados" 
           primary={`${metrics.confirmedCount} Confirmados`} 
-          secondary={`${metrics.allMembers.length - metrics.confirmedCount} Pendientes`}
+          secondary={`${metrics.pendingCount} Pendientes`}
           alert={metrics.unseatedCount > 0 ? `${metrics.unseatedCount} sin mesa` : undefined}
         />
         <SummarySection 

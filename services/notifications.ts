@@ -19,6 +19,7 @@ export interface NotificationPayload {
  */
 export const dispatchPushNotification = async (payload: {
   wedding_id: string;
+  user_id?: string | null;
   title: string;
   message: string;
   link: string;
@@ -26,72 +27,95 @@ export const dispatchPushNotification = async (payload: {
 }) => {
   const isRsvp = payload.type === 'rsvp_update';
   const isTask = payload.type === 'general' || payload.type.startsWith('task_');
-
-  let finalPayload: any = {
-    wedding_id: payload.wedding_id,
-    title: payload.title,
-    message: payload.message,
-    link: payload.link,
-    type: payload.type,
-  };
+  const isVendor = payload.type.startsWith('vendor_');
+  const isBudget = payload.type === 'budget_alert';
 
   if (isTask) {
-    // Normalizar el payload solo para Tasks
-    finalPayload = {
-      wedding_id: String(payload.wedding_id || ''),
-      title: String(payload.title || ''),
-      message: String(payload.message || ''),
-      link: String(payload.link || '/?section=tareas'),
-      type: String(payload.type || 'general'),
-    };
-
-    if (!finalPayload.wedding_id || !finalPayload.title || !finalPayload.message) {
-      console.error("TASK_PUSH_EDGE_INVALID_PAYLOAD", finalPayload);
-      return;
-    }
+    console.log("TASK_NOTIFICATION_START");
+  } else if (isRsvp) {
+    console.log("RSVP_NOTIFICATION_START");
+  } else if (isVendor) {
+    console.log("VENDOR_NOTIFICATION_START");
+  } else if (isBudget) {
+    console.log("BUDGET_NOTIFICATION_START");
   }
 
-  if (isRsvp) console.log("RSVP_PUSH_EDGE_START", finalPayload);
-  else if (isTask) console.log("TASK_PUSH_EDGE_START", finalPayload);
-  else console.log("PUSH_EDGE_START", finalPayload);
+  // Deduplicate tokens in DB to prevent Edge Function from sending duplicates
+  try {
+    const { data: tokens, error: tokensError } = await supabase!
+      .from('notification_tokens')
+      .select('id, token')
+      .eq('wedding_id', payload.wedding_id)
+      .eq('enabled', true);
 
-  if (isTask) console.log("TASK_PUSH_EDGE_PAYLOAD", finalPayload);
+    if (!tokensError && tokens) {
+      const rawCount = tokens.length;
+      const uniqueTokens = new Set<string>();
+      const duplicateIds: string[] = [];
+
+      tokens.forEach(t => {
+        if (uniqueTokens.has(t.token)) {
+          duplicateIds.push(t.id);
+        } else {
+          uniqueTokens.add(t.token);
+        }
+      });
+
+      console.log("PUSH_TOKENS_RAW_COUNT", rawCount);
+      console.log("PUSH_TOKENS_UNIQUE_COUNT", uniqueTokens.size);
+      console.log("PUSH_DUPLICATE_TOKEN_SKIPPED", duplicateIds.length);
+
+      if (duplicateIds.length > 0) {
+        await supabase!.from('notification_tokens').delete().in('id', duplicateIds);
+      }
+    }
+  } catch (e) {
+    console.error("Error deduplicating tokens", e);
+  }
+
+  // Exact payload requested
+  const finalPayload = {
+    wedding_id: String(payload.wedding_id || ''),
+    title: String(payload.title || ''),
+    message: String(payload.message || ''),
+    link: String(payload.link || ''),
+    type: String(payload.type || 'general'),
+  };
+
+  console.log("PUSH_EDGE_START");
+  console.log("PUSH_EDGE_PAYLOAD", finalPayload);
 
   try {
-    const { data, error } = await supabase!.functions.invoke('send-push-notification', {
-      body: finalPayload
+    const response = await supabase!.functions.invoke('send-push-notification', {
+      body: finalPayload,
+      method: 'POST'
     });
 
+    const { data, error } = response;
+
     if (error) {
-      if (isTask) {
-        console.error("TASK_PUSH_EDGE_ERROR", {
-          error,
-          message: error.message,
-          name: error.name,
-          context: (error as any).context,
-          data
-        });
-      } else {
-        console.error("PUSH_EDGE_ERROR", error);
-      }
+      console.error("PUSH_EDGE_ERROR_FULL", {
+        name: error.name,
+        message: error.message,
+        context: error.context,
+        status: (error as any).status,
+        response: data || (error as any).response,
+        body: data
+      });
       return;
     }
 
-    if (isRsvp) console.log("RSVP_PUSH_EDGE_OK");
-    else if (isTask) console.log("TASK_PUSH_EDGE_OK");
-    else console.log("PUSH_EDGE_OK");
+    console.log("PUSH_EDGE_RESULT", data);
+    console.log("PUSH_EDGE_OK");
   } catch (error: any) {
-    if (isTask) {
-      console.error("TASK_PUSH_EDGE_ERROR", {
-        error,
-        message: error.message,
-        name: error.name,
-        context: error.context
-      });
-    } else {
-      console.error("PUSH_EDGE_ERROR", error);
-    }
-    // No lanzamos error para no romper el flujo principal si falla el push
+    console.error("PUSH_EDGE_ERROR_FULL", {
+      name: error.name,
+      message: error.message,
+      context: error.context,
+      status: error.status,
+      response: error.response,
+      body: null
+    });
   }
 };
 
@@ -107,13 +131,7 @@ export const createAppNotification = async (
   severity: NotificationSeverity,
   link: string
 ) => {
-  // Logs por módulo
-  if (type === 'rsvp_update') console.log("RSVP_NOTIFICATION_START", { weddingId, title });
-  else if (type.startsWith('task_') || type === 'general') console.log("TASK_NOTIFICATION_START", { weddingId, title });
-  else if (type.startsWith('vendor_')) console.log("VENDOR_NOTIFICATION_START", { weddingId, title });
-  else if (type === 'budget_alert') console.log("BUDGET_NOTIFICATION_START", { weddingId, title });
-
-  console.log("NOTIF_CREATE_START", { type, title });
+  console.log("NOTIF_CREATE_START", { type, title, message, severity, link });
 
   try {
     // Evitar duplicados recientes (últimas 24h para automáticos, 1 min para RSVP y general)
@@ -143,9 +161,6 @@ export const createAppNotification = async (
 
       if (existing && existing.length > 0) {
         console.log("NOTIF_DUPLICATE_SKIPPED", { type, title });
-        if (type === 'rsvp_update') {
-          console.log("RSVP_PUSH_EDGE_ALREADY_SENT_SKIPPED");
-        }
         return null;
       }
     }
@@ -166,7 +181,9 @@ export const createAppNotification = async (
       .single();
 
     if (error) throw error;
-    console.log("NOTIF_CREATE_OK");
+    
+    console.log("NOTIF_CREATE_OK", { id: data.id });
+
     return data;
   } catch (error) {
     console.error("NOTIF_CREATE_ERROR", error);
@@ -192,6 +209,7 @@ export const createAndDispatchNotification = async (
   if (notif) {
     await dispatchPushNotification({
       wedding_id: weddingId,
+      user_id: userId,
       title,
       message,
       link,

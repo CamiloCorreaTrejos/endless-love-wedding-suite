@@ -119,16 +119,30 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode, weddin
   }, [weddingId, userId, refetch]);
 
   const markRead = async (id: string, weddingId: string) => {
+    console.log("NOTIF_MARK_READ_START", { id, weddingId });
+    // Optimistic update
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     const { error } = await markNotificationRead(id, weddingId);
     if (!error) {
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      console.log("NOTIF_MARK_READ_OK", { id });
+    } else {
+      console.error("NOTIF_MARK_READ_ERROR", error);
+      // Revert on error
+      refetch(weddingId, userId || undefined);
     }
   };
 
   const markAllRead = async (weddingId: string, userId?: string) => {
+    console.log("MARK_ALL_READ_START", { weddingId, userId });
+    // Optimistic update
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     const { error } = await markAllNotificationsRead(weddingId, userId);
     if (!error) {
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      console.log("MARK_ALL_READ_OK");
+    } else {
+      console.error("MARK_ALL_READ_ERROR", error);
+      // Revert on error
+      refetch(weddingId, userId || undefined);
     }
   };
 

@@ -39,8 +39,9 @@ messaging.onBackgroundMessage((payload) => {
 // Click
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification?.data?.link || event.notification?.data?.url || "/?section=notificaciones";
-  event.waitUntil(clients.openWindow(url));
+  const link = event.notification?.data?.link || "/?section=notificaciones";
+  console.log('PUSH_SW_CLICK_LINK', link);
+  event.waitUntil(clients.openWindow(link));
 });
 
 // PWA & Generic Push support
@@ -57,15 +58,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('push', (event) => {
   console.log('[SW] Push Received', event);
   
-  // Si el evento push viene de FCM, onBackgroundMessage lo manejará (o el navegador si trae notification).
-  // Para evitar duplicar con el listener genérico 'push', podemos intentar parsear y ver si es de FCM.
   let data = {};
   if (event.data) {
     try {
       data = event.data.json();
-      // Si es un payload de FCM, normalmente tiene data.fcmOptions o similar, 
-      // pero para estar seguros, si ya lo maneja onBackgroundMessage, podríamos ignorarlo aquí.
-      // Sin embargo, si es un push genérico (no FCM), lo mostramos.
+      
+      // Si el payload trae notification, el navegador/FCM lo maneja automáticamente.
       if (data.notification) {
          console.log('PUSH_SW_DUPLICATE_PREVENTED: Generic push contains notification object.');
          return;
@@ -75,17 +73,22 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  // Solo mostramos si no es un payload vacío o si estamos seguros de que no fue manejado
-  if (data.title || data.message) {
-    console.log('PUSH_EDGE_DATA_ONLY_MODE: Generic push data-only.');
+  // Normalizar payload para soportar FCM HTTP v1 (data.data) o directo (data)
+  const pushData = data?.data || data || {};
+  
+  // Solo mostramos si tiene contenido mínimo
+  if (pushData.title || pushData.message) {
+    console.log('PUSH_EDGE_DATA_ONLY_MODE: Generic push data-only normalized.');
     console.log('PUSH_SW_SHOW_NOTIFICATION');
-    const title = data.title || 'Endless Love';
+    
+    const title = pushData.title || 'Endless Love';
     const options = {
-      body: data.message || 'Tienes una nueva actualización.',
+      body: pushData.message || 'Tienes una nueva actualización.',
       icon: '/pwa-192.png',
       badge: '/pwa-192.png',
       data: {
-        url: data.link || '/?section=notificaciones'
+        link: pushData.link || '/?section=notificaciones',
+        type: pushData.type || 'general'
       }
     };
 
