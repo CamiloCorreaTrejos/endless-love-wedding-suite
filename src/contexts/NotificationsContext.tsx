@@ -30,28 +30,46 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode, weddin
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const notificationsRef = useRef<NotificationItem[]>([]);
-  
-  useEffect(() => {
-    notificationsRef.current = notifications;
-  }, [notifications]);
+  const knownIdsRef = useRef<Set<string>>(new Set());
+  const initialLoadDoneRef = useRef(false);
 
-  const refetch = useCallback(async (id: string, uid?: string) => {
+  const refetch = useCallback(async (id: string, uid?: string, isFromRealtime = false) => {
     if (!id || id === '00000000-0000-0000-0000-000000000000') {
       console.warn("MODULE_BLOCKED_NO_WEDDING_ID");
       setLoading(false);
       return;
     }
-    setLoading(prev => notificationsRef.current.length === 0 ? true : prev);
-    const { data, error } = await getNotificationsByWedding(id, uid);
-    if (error) {
-      setError(error.message);
+    
+    setLoading(prev => !initialLoadDoneRef.current ? true : prev);
+    
+    const { data, error: fetchError } = await getNotificationsByWedding(id, uid);
+    if (fetchError) {
+      setError(fetchError.message);
     } else if (data) {
-      // Check for new notifications to show toasts
-      const currentNotifs = notificationsRef.current;
-      if (currentNotifs.length > 0) {
-        const newNotifs = data.filter(n => !n.isRead && !currentNotifs.find(old => old.id === n.id));
+      if (!initialLoadDoneRef.current || !isFromRealtime) {
+        // Initial load or non-realtime fetch (e.g. auth change)
+        const newIdsCount = data.length;
+        data.forEach(n => knownIdsRef.current.add(n.id));
+        
+        if (!initialLoadDoneRef.current) {
+          console.log("NOTIF_INITIAL_LOAD");
+          console.log("NOTIF_INITIAL_IDS_REGISTERED", newIdsCount);
+          initialLoadDoneRef.current = true;
+        } else {
+          console.log("NOTIF_REPLAY_PREVENTED", newIdsCount);
+        }
+      } else {
+        // Realtime fetching
+        const newNotifs = data.filter(n => !n.isRead && !knownIdsRef.current.has(n.id));
+        const skippedNotifs = data.filter(n => !n.isRead && knownIdsRef.current.has(n.id));
+        
+        if (skippedNotifs.length > 0) {
+          console.log("NOTIF_REALTIME_SKIPPED_ALREADY_KNOWN", skippedNotifs.length);
+        }
+
         newNotifs.forEach(n => {
+          console.log("NOTIF_REALTIME_NEW", n.id);
+          knownIdsRef.current.add(n.id);
           const toastId = Math.random().toString(36).substr(2, 9);
           setToasts(prev => [...prev, { id: toastId, notification: n }]);
           // Auto-dismiss toast after 5 seconds
@@ -60,6 +78,7 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode, weddin
           }, 5000);
         });
       }
+      
       setNotifications(data);
       setError(null);
     }
@@ -75,7 +94,7 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode, weddin
     }
     refetchTimeoutRef.current = setTimeout(() => {
       console.log(`REALTIME_REFETCH_TRIGGERED (notifications)`);
-      refetch(id, uid);
+      refetch(id, uid, true);
     }, 1000);
   }, [refetch]);
 

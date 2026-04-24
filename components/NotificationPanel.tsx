@@ -156,8 +156,13 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ onClose, o
 
       <div className="p-4 bg-stone-50 border-t border-stone-100 text-center">
         <button 
-          onClick={() => {
-            if (onViewAll) {
+          onClick={(e) => {
+            e.preventDefault();
+            console.log("NOTIF_VIEW_ALL_CLICK");
+            if (onNavigate) {
+              console.log("NOTIF_VIEW_ALL_NAVIGATE");
+              onNavigate('/?section=notifications');
+            } else if (onViewAll) {
               onViewAll();
             } else {
               window.location.href = '/?section=notificaciones';

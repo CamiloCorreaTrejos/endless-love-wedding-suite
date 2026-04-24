@@ -53,6 +53,11 @@ export const resolveNotificationTarget = (link: string): string => {
   // Check what we have
   const target = sectionParam || path;
 
+  if (!target) {
+    console.log("NOTIF_ACTIVE_TAB_RESOLVED", { resolvedTab: 'dashboard', target });
+    return 'dashboard';
+  }
+
   const sectionMap: Record<string, string> = {
     'tasks': 'tasks',
     'tareas': 'tasks',
