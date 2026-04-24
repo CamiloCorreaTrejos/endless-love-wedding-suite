@@ -40,39 +40,9 @@ export const dispatchPushNotification = async (payload: {
     console.log("BUDGET_NOTIFICATION_START");
   }
 
-  // Deduplicate tokens in DB to prevent Edge Function from sending duplicates
-  try {
-    const { data: tokens, error: tokensError } = await supabase!
-      .from('notification_tokens')
-      .select('id, token')
-      .eq('wedding_id', payload.wedding_id)
-      .eq('enabled', true);
-
-    if (!tokensError && tokens) {
-      const rawCount = tokens.length;
-      const uniqueTokens = new Set<string>();
-      const duplicateIds: string[] = [];
-
-      tokens.forEach(t => {
-        if (uniqueTokens.has(t.token)) {
-          duplicateIds.push(t.id);
-        } else {
-          uniqueTokens.add(t.token);
-        }
-      });
-
-      console.log("PUSH_TOKENS_RAW_COUNT", rawCount);
-      console.log("PUSH_TOKENS_UNIQUE_COUNT", uniqueTokens.size);
-      console.log("PUSH_DUPLICATE_TOKEN_SKIPPED", duplicateIds.length);
-
-      if (duplicateIds.length > 0) {
-        await supabase!.from('notification_tokens').delete().in('id', duplicateIds);
-      }
-    }
-  } catch (e) {
-    console.error("Error deduplicating tokens", e);
-  }
-
+  // Deduplication and cleanup goes to Edge function because client with RLS can't read other users' tokens.
+  // We send the notification request directly to the Edge Function.
+  
   // Exact payload requested
   const finalPayload = {
     wedding_id: String(payload.wedding_id || ''),

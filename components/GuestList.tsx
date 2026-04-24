@@ -560,13 +560,14 @@ export const GuestList: React.FC<GuestListProps> = ({ guests, tables, onAddGuest
                       <p className="font-bold text-stone-800 text-sm md:text-base serif leading-snug">
                         {inv.members.map(m => m.name).join(' & ')}
                       </p>
+                      {/* 
                       <div className="flex flex-wrap gap-1 mt-2">
                         {inv.members.map((m, i) => (
                           <span key={m.id || i} className={`text-[8px] px-1.5 py-0.5 rounded-md border font-bold uppercase tracking-tighter ${m.isUnknown ? 'border-stone-100 text-stone-300 italic' : 'border-stone-100 bg-stone-50 text-stone-500'}`}>
                             {getAgeCategoryLabel(m.ageCategory)}
                           </span>
                         ))}
-                      </div>
+                      </div> */}
                     </td>
                     <td className="px-4 py-3">
                       <div className="relative group/cat">

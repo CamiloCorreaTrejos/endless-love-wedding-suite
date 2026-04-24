@@ -331,8 +331,8 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
         )}
 
         <div className={`p-2 bg-stone-50 rounded-xl flex items-center gap-2 transition-all ${collapsed ? 'justify-center' : ''}`}>
-          <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-white text-[9px] font-bold shrink-0 shadow-inner" style={{ backgroundColor: COLORS.detail }}>
-            {data.partner1[0]}{data.partner2[0]}
+          <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center text-white shrink-0 shadow-inner bg-black">
+            <img src="https://odluvqpfwypkufkugoep.supabase.co/storage/v1/object/public/wedding-covers/icon.png" alt="Couple" className="w-4 h-4 object-cover" />
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0 text-stone-800">
@@ -419,8 +419,8 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, setActiveTab, onLogou
                   </div>
                 )}
               </div>
-              <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-[10px] font-bold text-stone-500">
-                {data.partner1[0]}{data.partner2[0]}
+              <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center overflow-hidden">
+                <img src="https://odluvqpfwypkufkugoep.supabase.co/storage/v1/object/public/wedding-covers/icon.png" alt="Couple" className="w-full h-full object-cover" />
               </div>
            </div>
         </div>

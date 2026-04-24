@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { NotificationItem } from '../../types';
 import { getNotificationsByWedding, markNotificationRead, markAllNotificationsRead, supabase } from '../../services/supabase';
+import { useAuth } from '../lib/AuthContext';
 
 interface Toast {
   id: string;
@@ -23,6 +24,7 @@ interface NotificationsContextType {
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
 export const NotificationsProvider: React.FC<{ children: React.ReactNode, weddingId: string | null, userId: string | null }> = ({ children, weddingId, userId }) => {
+  const { session, authUser, userProfile } = useAuth();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,37 +101,57 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode, weddin
   }, [refetch]);
 
   useEffect(() => {
-    if (!weddingId || weddingId === '00000000-0000-0000-0000-000000000000' || !supabase) return;
+    const currentWeddingId = userProfile?.wedding_id || weddingId;
+    
+    console.log("NOTIF_REALTIME_SUBSCRIBE_ATTEMPT", { 
+      hasSession: !!session, 
+      hasUserId: !!authUser?.id, 
+      hasProfile: !!userProfile, 
+      weddingId: currentWeddingId 
+    });
 
-    console.log("REALTIME_SUBSCRIBE_START", { weddingId, module: 'notifications' });
+    if (!session) {
+      console.log("NOTIF_REALTIME_SUBSCRIBE_SKIPPED_NO_SESSION");
+      return;
+    }
+    if (!userProfile) {
+      console.log("NOTIF_REALTIME_SUBSCRIBE_SKIPPED_NO_PROFILE");
+      return;
+    }
+    if (!currentWeddingId || currentWeddingId === '00000000-0000-0000-0000-000000000000') {
+      console.log("NOTIF_REALTIME_SUBSCRIBE_SKIPPED_NO_WEDDING");
+      return;
+    }
+    if (!supabase) return;
 
-    const channel = supabase!.channel(`notifications_${weddingId}`)
+    const channel = supabase.channel(`notifications_${currentWeddingId}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `wedding_id=eq.${weddingId}` },
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `wedding_id=eq.${currentWeddingId}` },
         (payload) => {
           console.log("NOTIFS_REALTIME_EVENT", payload);
-          debouncedRefetch(weddingId, userId || undefined);
+          debouncedRefetch(currentWeddingId, authUser?.id || userId || undefined);
         }
       )
       .subscribe((status) => {
+        console.log("NOTIF_REALTIME_CHANNEL_STATUS", { status, module: 'notifications' });
         if (status === 'SUBSCRIBED') {
-          console.log("REALTIME_SUBSCRIBE_OK", { module: 'notifications' });
+          console.log("NOTIF_REALTIME_SUBSCRIBED", { module: 'notifications' });
         } else if (status === 'CLOSED') {
-          console.log("REALTIME_UNSUBSCRIBE", { module: 'notifications' });
+          console.log("NOTIF_REALTIME_UNSUBSCRIBE", { module: 'notifications' });
         } else if (status === 'CHANNEL_ERROR') {
-          console.error("REALTIME_ERROR", { module: 'notifications' });
+          console.error("NOTIF_REALTIME_ERROR_FULL", { module: 'notifications' });
         }
       });
 
     return () => {
-      console.log("REALTIME_UNSUBSCRIBE_START", { module: 'notifications' });
-      supabase!.removeChannel(channel);
+      console.log("NOTIF_REALTIME_UNSUBSCRIBE", { module: 'notifications' });
+      supabase.removeChannel(channel);
       if (refetchTimeoutRef.current) {
         clearTimeout(refetchTimeoutRef.current);
       }
     };
-  }, [weddingId, userId, debouncedRefetch]);
+  }, [session, authUser?.id, userProfile?.wedding_id, weddingId, userId, debouncedRefetch]);
 
   useEffect(() => {
     if (weddingId) {
