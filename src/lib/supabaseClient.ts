@@ -24,6 +24,13 @@ const getEnv = (key: string) => {
 const supabaseUrl = getEnv('VITE_SUPABASE_URL');
 const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY');
 
+// Diagnosticar variables en producción
+console.log("SUPABASE_ENV_CHECK", {
+  hasUrl: !!supabaseUrl,
+  hasAnonKey: !!supabaseAnonKey,
+  urlHost: supabaseUrl ? new URL(supabaseUrl).host : null
+});
+
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn("⚠️ Supabase credentials missing. Check window.__ENV__ or .env file.");
 }
